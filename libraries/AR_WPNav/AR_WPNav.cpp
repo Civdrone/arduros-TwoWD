@@ -168,6 +168,14 @@ void AR_WPNav::update(float dt)
         _pivot_rate = 45;
     }
 
+    float yaw_error_cd = fabsf(_wp_bearing_cd - AP::ahrs().yaw_sensor);
+
+    if( (yaw_error_cd >= 9500 && yaw_error_cd <= 26500) && _distance_to_destination < 0.5f ){
+        _reversed = true;
+    } else{
+        _reversed = false;
+    }
+
     // if object avoidance is active check if vehicle should pivot towards destination
     if (_oa_active) {
         update_pivot_active_flag();
