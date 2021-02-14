@@ -1221,15 +1221,41 @@ AP_GPS_UBLOX::_parse_gps(void)
             _unconfigured_messages |= CONFIG_RATE_POSLLH;
             break;
         }
-        _check_new_itow(_buffer.posllh.itow);
-        _last_pos_time        = _buffer.posllh.itow;
-        state.location.lng    = _buffer.posllh.longitude;
-        state.location.lat    = _buffer.posllh.latitude;
-        state.location.alt    = _buffer.posllh.altitude_msl / 10;
-        state.status          = next_fix;
-        _new_position = true;
+        if(!haveHpposMsg){
+            _check_new_itow(_buffer.posllh.itow);
+            _last_pos_time        = _buffer.posllh.itow;
+            state.location.lng    = _buffer.posllh.longitude;
+            state.location.lat    = _buffer.posllh.latitude;
+            state.location.alt    = _buffer.posllh.altitude_msl / 10;
+            state.status          = next_fix;
+            _new_position = true;
+        }
         state.horizontal_accuracy = _buffer.posllh.horizontal_accuracy*1.0e-3f;
         state.vertical_accuracy = _buffer.posllh.vertical_accuracy*1.0e-3f;
+        state.have_horizontal_accuracy = true;
+        state.have_vertical_accuracy = true;
+#if UBLOX_FAKE_3DLOCK
+        state.location.lng = 1491652300L;
+        state.location.lat = -353632610L;
+        state.location.alt = 58400;
+        state.vertical_accuracy = 0;
+        state.horizontal_accuracy = 0;
+#endif
+        break;
+    case MSG_HPPOSLLH:
+        Debug("MSG_HPPOSLLH next_fix=%u", next_fix);
+        haveHpposMsg = true;
+        _check_new_itow(_buffer.posllh.itow);
+        _last_pos_time        = _buffer.hpposllh.itow;
+        state.location.lng    = _buffer.hpposllh.longitude;
+        state.location.lat    = _buffer.hpposllh.latitude;
+        state.location.alt    = _buffer.hpposllh.altitude_msl / 10;
+        state.location.lng_hp = _buffer.hpposllh.lonHp;
+        state.location.lat_hp = _buffer.hpposllh.latHp;
+        state.status          = next_fix;
+        _new_position = true;
+        state.horizontal_accuracy = _buffer.hpposllh.horizontal_accuracy*1.0e-3f;
+        state.vertical_accuracy = _buffer.hpposllh.vertical_accuracy*1.0e-3f;
         state.have_horizontal_accuracy = true;
         state.have_vertical_accuracy = true;
 #if UBLOX_FAKE_3DLOCK
@@ -1367,12 +1393,16 @@ AP_GPS_UBLOX::_parse_gps(void)
 
         havePvtMsg = true;
         // position
-        _check_new_itow(_buffer.pvt.itow);
-        _last_pvt_itow = _buffer.pvt.itow;
-        _last_pos_time        = _buffer.pvt.itow;
-        state.location.lng    = _buffer.pvt.lon;
-        state.location.lat    = _buffer.pvt.lat;
-        state.location.alt    = _buffer.pvt.h_msl / 10;
+        //JO: Use HPPOSLLH if available:
+        if(!haveHpposMsg){
+            _check_new_itow(_buffer.pvt.itow);
+            _last_pos_time        = _buffer.pvt.itow;
+            state.location.lng    = _buffer.pvt.lon;
+            state.location.lat    = _buffer.pvt.lat;
+            state.location.alt    = _buffer.pvt.h_msl / 10;
+            _new_position = true;
+        }
+
         switch (_buffer.pvt.fix_type) 
         {
             case 0:
@@ -1406,7 +1436,6 @@ AP_GPS_UBLOX::_parse_gps(void)
                 break;
         }
         next_fix = state.status;
-        _new_position = true;
         state.horizontal_accuracy = _buffer.pvt.h_acc*1.0e-3f;
         state.vertical_accuracy = _buffer.pvt.v_acc*1.0e-3f;
         state.have_horizontal_accuracy = true;

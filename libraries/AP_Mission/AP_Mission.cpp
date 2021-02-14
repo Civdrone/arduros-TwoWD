@@ -1115,6 +1115,16 @@ MAV_MISSION_RESULT AP_Mission::mavlink_int_to_mission_cmd(const mavlink_mission_
 
         cmd.content.location.alt = packet.z * 100.0f;       // convert packet's alt (m) to cmd alt (cm)
 
+        // Add high precision:
+        if(cmd.id == MAV_CMD_NAV_WAYPOINT){
+          cmd.content.location.lat_hp = packet.param2;
+          cmd.content.location.lng_hp = packet.param4;
+        } 
+        else { // No high precision information availabled
+          cmd.content.location.lat_hp = 0;
+          cmd.content.location.lng_hp = 0;
+        }
+
         switch (packet.frame) {
 
         case MAV_FRAME_MISSION:

@@ -193,6 +193,22 @@ void SITL_State::_update_gps_ubx(const struct gps_data *d, uint8_t instance)
         uint32_t    horizontal_accuracy;
         uint32_t    vertical_accuracy;
     } pos {};
+    struct PACKED ubx_nav_hpposllh {
+        uint8_t version;
+        uint16_t reserved;
+        uint8_t flags;
+        uint32_t time;                     // GPS msToW
+        int32_t longitude;
+        int32_t latitude;
+        int32_t altitude_ellipsoid;
+        int32_t altitude_msl;
+        int8_t lonHp;
+        int8_t latHp;
+        int8_t heightHp;
+        int8_t hMSLHp;
+        uint32_t horizontal_accuracy;
+        uint32_t vertical_accuracy;
+    } hppos {};
     struct PACKED ubx_nav_status {
         uint32_t    time;               // GPS msToW
         uint8_t     fix_type;
@@ -322,6 +338,7 @@ void SITL_State::_update_gps_ubx(const struct gps_data *d, uint8_t instance)
     } relposned {};
 
     const uint8_t MSG_POSLLH = 0x2;
+    const uint8_t MSG_HPPOSLLH = 0x14;
     const uint8_t MSG_STATUS = 0x3;
     const uint8_t MSG_DOP = 0x4;
     const uint8_t MSG_VELNED = 0x12;
@@ -344,6 +361,19 @@ void SITL_State::_update_gps_ubx(const struct gps_data *d, uint8_t instance)
     pos.altitude_msl = d->altitude * 1000.0f;
     pos.horizontal_accuracy = _sitl->gps_accuracy[instance]*1000;
     pos.vertical_accuracy = _sitl->gps_accuracy[instance]*1000;
+
+    hppos.time = time_week_ms;
+    hppos.longitude = d->longitude * 1.0e7;
+    hppos.latitude  = d->latitude * 1.0e7;
+    hppos.altitude_ellipsoid = d->altitude * 1000.0f;
+    hppos.altitude_msl = d->altitude * 1000.0f;
+    hppos.horizontal_accuracy = 1500;
+    hppos.vertical_accuracy = 2000;
+    double fractpart, intpart;
+    fractpart = modf(d->latitude * 1.0e7, &intpart);
+    hppos.latHp = (int8_t) (fractpart * 100.0f);
+    fractpart = modf(d->longitude * 1.0e7, &intpart);
+    hppos.lonHp = (int8_t) (fractpart * 100.0f);
 
     status.time = time_week_ms;
     status.fix_type = d->have_lock?3:0;
@@ -432,6 +462,7 @@ void SITL_State::_update_gps_ubx(const struct gps_data *d, uint8_t instance)
     }
 
     _gps_send_ubx(MSG_POSLLH, (uint8_t*)&pos, sizeof(pos), instance);
+    _gps_send_ubx(MSG_HPPOSLLH, (uint8_t*)&hppos, sizeof(hppos), instance);
     _gps_send_ubx(MSG_STATUS, (uint8_t*)&status, sizeof(status), instance);
     _gps_send_ubx(MSG_VELNED, (uint8_t*)&velned, sizeof(velned), instance);
     _gps_send_ubx(MSG_SOL,    (uint8_t*)&sol, sizeof(sol), instance);
