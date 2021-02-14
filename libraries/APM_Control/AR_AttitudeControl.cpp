@@ -540,6 +540,12 @@ float AR_AttitudeControl::get_turn_rate_from_lat_accel(float lat_accel, float sp
     return lat_accel / speed;
 }
 
+void AR_AttitudeControl::set_throttle_limits(float throttle_accel_max, float throttle_decel_max)
+{
+   _throttle_accel_max = throttle_accel_max;
+   _throttle_decel_max = throttle_decel_max; 
+}
+
 // return a throttle output from -1 to +1 given a desired speed in m/s (use negative speeds to travel backwards)
 //   motor_limit should be true if motors have hit their upper or lower limits
 //   cruise speed should be in m/s, cruise throttle should be a number from -1 to +1

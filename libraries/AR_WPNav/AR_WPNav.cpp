@@ -142,6 +142,32 @@ void AR_WPNav::update(float dt)
 
     update_distance_and_bearing_to_destination();
 
+    // reducing desired speed and acceleration before reaching the destination
+    if(_distance_to_destination < 2) 
+    {
+        _desired_speed = _speed_max * 0.5f;
+        _atc.set_throttle_limits(0.8f, 1.2f);
+        _pivot_rate = 35;
+        if(_distance_to_destination < 1.0f) 
+        {
+            _desired_speed = _speed_max * 0.3f;
+            _atc.set_throttle_limits(0.4f, 1.2f);
+            _pivot_rate = 20;
+            if(_distance_to_destination < 0.5f) 
+            {
+                _desired_speed = _speed_max * 0.1f;
+                _atc.set_throttle_limits(0.3f, 1.2f);
+                _pivot_rate = 16;
+            }
+        }
+    } 
+    else 
+    {
+        _desired_speed = _speed_max;
+        _atc.set_throttle_limits(1.0f,1.5f);
+        _pivot_rate = 45;
+    }
+
     // if object avoidance is active check if vehicle should pivot towards destination
     if (_oa_active) {
         update_pivot_active_flag();
@@ -165,6 +191,7 @@ void AR_WPNav::update(float dt)
         _desired_turn_rate_rads = 0.0f;
         
         if (_count_near_wp >= 5) {
+            _atc.set_throttle_limits(0.8f,1.5f);
             _count_near_wp = 0;
             _reached_destination = true;
             return;
