@@ -154,6 +154,7 @@ private:
     // variables for reporting
     float _distance_to_destination; // distance from vehicle to final destination in meters
     bool _reached_destination;      // true once the vehicle has reached the destination
+    uint16_t _count_near_wp {0};    // counts the number of times the vehicles is inside the waypoint radius consecutively
 
     // object avoidance variables
     bool _oa_active;                // true if we should use alternative destination to avoid obstacles

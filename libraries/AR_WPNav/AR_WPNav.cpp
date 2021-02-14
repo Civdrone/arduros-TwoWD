@@ -157,9 +157,22 @@ void AR_WPNav::update(float dt)
 
     // check if vehicle has reached the destination
     const bool near_wp = _distance_to_destination <= _radius;
-    const bool past_wp = !_oa_active && current_loc.past_interval_finish_line(_origin, _destination);
-    if (!_reached_destination && (near_wp || past_wp)) {
-       _reached_destination = true;
+
+    if(near_wp){
+        
+        _desired_speed_limited = _atc.get_desired_speed_accel_limited(0.0f, dt);
+        _desired_lat_accel = 0.0f;
+        _desired_turn_rate_rads = 0.0f;
+        
+        if (_count_near_wp >= 5) {
+            _count_near_wp = 0;
+            _reached_destination = true;
+            return;
+        }
+        _count_near_wp++;
+    }
+    else{
+        _count_near_wp = 0;
     }
 
     // handle stopping vehicle if avoidance has failed
