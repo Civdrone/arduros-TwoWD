@@ -26,6 +26,8 @@
 #include "ap_message.h"
 
 #define GCS_DEBUG_SEND_MESSAGE_TIMINGS 0
+#define MAV_CMD_GET_CURRETN_POSITION    26
+#define CURRENT_POSITION_MSG            10
 
 #ifndef HAL_NO_GCS
 
