@@ -163,6 +163,15 @@ const AP_Param::GroupInfo AP_AHRS::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("CUSTOM_YAW", 17, AP_AHRS, _custom_yaw, 0),
 
+    // @Param: GPS_ANT_HGT
+    // @DisplayName: GPS antenna height
+    // @Description: The GPS antenna height from the ground in meters.
+    // @Range: 0 10
+    // @Units: m
+    // @Increment: 0.01
+    // @User: Standard
+    AP_GROUPINFO("GPS_ANT_HGT", 18, AP_AHRS, _gps_antenna_height, 0),
+
     AP_GROUPEND
 };
 

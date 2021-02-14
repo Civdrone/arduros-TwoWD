@@ -18,6 +18,9 @@
  *  ArduPilot
  *
  */
+
+#define ALLOW_DOUBLE_MATH_FUNCTIONS
+
 #include <AP_HAL/AP_HAL.h>
 #include "AP_AHRS.h"
 #include "AP_AHRS_View.h"
@@ -540,23 +543,25 @@ void AP_AHRS_NavEKF::reset_attitude(const float &_roll, const float &_pitch, con
 // dead-reckoning support
 bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
 {
+    
+    bool useFallback = true;
+    bool success = false;
+    
     switch (active_EKF_type()) {
     case EKFType::NONE:
-        return AP_AHRS_DCM::get_position(loc);
+        useFallback = false;
+        success = AP_AHRS_DCM::get_position(loc);
+        break;
 
 #if HAL_NAVEKF2_AVAILABLE
     case EKFType::TWO:
-        if (EKF2.getLLH(loc)) {
-            return true;
-        }
+        success = EKF2.getLLH(loc);
         break;
 #endif
 
 #if HAL_NAVEKF3_AVAILABLE
     case EKFType::THREE:
-        if (EKF3.getLLH(loc)) {
-            return true;
-        }
+        success = EKF3.getLLH(loc);
         break;
 #endif
 
@@ -582,10 +587,33 @@ bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
     }
 
     // fall back to position from DCM
-    if (!always_use_EKF()) {
-        return AP_AHRS_DCM::get_position(loc);
+    if (!success && 
+        useFallback && 
+        !always_use_EKF()) {
+        success = AP_AHRS_DCM::get_position(loc);
     }
-    return false;
+
+    if (success) {
+        //Incline location correction
+        double phi = -AP::ahrs().roll;       //[rad]
+        double theta = AP::ahrs().pitch;     //[rad]
+        double psai =  AP::ahrs().yaw;       //[rad]
+
+        double err_roll_meter = (sin(phi) * _gps_antenna_height);
+        double err_pitch_meter = (sin(theta) * _gps_antenna_height);
+
+        //Rotation Matrix
+        double d_lat_meter = err_pitch_meter * cos(psai) - err_roll_meter * sin(psai);
+        double d_lon_meter = err_pitch_meter * sin(psai) + err_roll_meter * cos(psai);
+
+        double d_lat_deg = (d_lat_meter / 6371000) * RAD_TO_DEG; //[deg]
+        double d_lng_deg = (d_lon_meter / 6371000) * RAD_TO_DEG; //[deg]
+
+        loc.lat += (int32_t)(d_lat_deg * 10000000);
+        loc.lng += (int32_t)(d_lng_deg * 10000000);
+    }  
+
+    return success;
 }
 
 // status reporting of estimated errors

@@ -642,6 +642,7 @@ protected:
     AP_Float _custom_roll;
     AP_Float _custom_pitch;
     AP_Float _custom_yaw;
+    AP_Float _gps_antenna_height;
 
     Matrix3f _custom_rotation;
 
