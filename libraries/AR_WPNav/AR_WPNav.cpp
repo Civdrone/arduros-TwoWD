@@ -84,6 +84,15 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("SPEED_MIN", 6, AR_WPNav, _speed_min, 0),
 
+    // @Param: ANGLE_ACCU
+    // @DisplayName: pivot angle accuracy
+    // @Description: Vehicle will pivot until reachs this angle.
+    // @Units: deg/s
+    // @Range: 0 360
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("ANGLE_ACCU", 7, AR_WPNav, _pivot_angle_accuracy, 10),
+
     AP_GROUPEND
 };
 
@@ -289,7 +298,7 @@ bool AR_WPNav::get_stopping_location(Location& stopping_loc)
 bool AR_WPNav::use_pivot_steering_at_next_WP(float yaw_error_cd) const
 {
     // check cases where we clearly cannot use pivot steering
-    if (!_pivot_possible || _pivot_angle <= AR_WPNAV_PIVOT_ANGLE_ACCURACY) {
+    if (!_pivot_possible || _pivot_angle <= _pivot_angle_accuracy) {
         return false;
     }
 
@@ -307,7 +316,7 @@ bool AR_WPNav::use_pivot_steering_at_next_WP(float yaw_error_cd) const
 void AR_WPNav::update_pivot_active_flag()
 {
     // check cases where we clearly cannot use pivot steering
-    if (!_pivot_possible || (_pivot_angle <= AR_WPNAV_PIVOT_ANGLE_ACCURACY)) {
+    if (!_pivot_possible || (_pivot_angle <= _pivot_angle_accuracy)) {
         _pivot_active = false;
         return;
     }
@@ -322,7 +331,7 @@ void AR_WPNav::update_pivot_active_flag()
     }
 
     // if within 10 degrees of the target heading, exit pivot steering
-    if (yaw_error < AR_WPNAV_PIVOT_ANGLE_ACCURACY) {
+    if (yaw_error < _pivot_angle_accuracy) {
         _pivot_active = false;
         return;
     }
