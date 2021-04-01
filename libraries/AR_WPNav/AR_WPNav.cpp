@@ -16,6 +16,7 @@
 #include <AP_Math/AP_Math.h>
 #include <AP_HAL/AP_HAL.h>
 #include "AR_WPNav.h"
+#include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -23,9 +24,9 @@ extern const AP_HAL::HAL& hal;
 #define AR_WPNAV_SPEED_DEFAULT          2.0f
 #define AR_WPNAV_RADIUS_DEFAULT         2.0f
 #define AR_WPNAV_OVERSHOOT_DEFAULT      2.0f
-#define AR_WPNAV_PIVOT_ANGLE_DEFAULT    60
-#define AR_WPNAV_PIVOT_ANGLE_ACCURACY   10      // vehicle will pivot to within this many degrees of destination
-#define AR_WPNAV_PIVOT_RATE_DEFAULT     90
+#define AR_WPNAV_PIVOT_ANGLE_DEFAULT    20
+#define AR_WPNAV_PIVOT_ANGLE_ACCURACY   10     // vehicle will pivot to within this many degrees of destination
+#define AR_WPNAV_PIVOT_RATE_DEFAULT     25
 
 const AP_Param::GroupInfo AR_WPNav::var_info[] = {
 
@@ -163,16 +164,9 @@ void AR_WPNav::update(float dt)
         _desired_speed_limited = _atc.get_desired_speed_accel_limited(0.0f, dt);
         _desired_lat_accel = 0.0f;
         _desired_turn_rate_rads = 0.0f;
-        
-        if (_count_near_wp >= 5) {
-            _count_near_wp = 0;
-            _reached_destination = true;
-            return;
-        }
-        _count_near_wp++;
-    }
-    else{
-        _count_near_wp = 0;
+        // _count_near_wp = 0;
+        _reached_destination = true;
+        return;
     }
 
     // handle stopping vehicle if avoidance has failed
@@ -321,7 +315,6 @@ void AR_WPNav::update_pivot_active_flag()
     // calc yaw error
     const float yaw_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;
     const float yaw_error = fabsf(wrap_180_cd(yaw_cd - AP::ahrs().yaw_sensor)) * 0.01f;
-
     // if error is larger than _pivot_angle start pivot steering
     if (yaw_error > _pivot_angle) {
         _pivot_active = true;
@@ -372,6 +365,7 @@ void AR_WPNav::update_distance_and_bearing_to_destination()
 // relies on update_distance_and_bearing_to_destination being called first so _wp_bearing_cd has been updated
 void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
 {
+    update_pivot_active_flag();
     // calculate desired turn rate and update desired heading
     if (_pivot_active) {
         _cross_track_error = calc_crosstrack_error(current_loc);
@@ -380,7 +374,7 @@ void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
         _desired_turn_rate_rads = _atc.get_turn_rate_from_heading(radians(_desired_heading_cd * 0.01f), radians(_pivot_rate));
 
         // update flag so that it can be cleared
-        update_pivot_active_flag();
+        // update_pivot_active_flag();
     } else {
         // run L1 controller
         _nav_controller.set_reverse(_reversed);
