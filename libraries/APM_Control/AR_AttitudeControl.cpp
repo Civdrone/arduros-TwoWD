@@ -401,7 +401,6 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Range: 0 10
     // @Increment: 0.01
     // @User: Advanced
-
     AP_SUBGROUPINFO(_pivot_rate_pid, "_PIV_PID_", 13, AR_AttitudeControl, AC_PID),
 
     // @Param: _PIV_ACC_MAX
@@ -421,24 +420,6 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Units: deg/s
     // @User: Standard
     AP_GROUPINFO("_PIV_RAT_MAX", 15, AR_AttitudeControl, _pivot_rate_max, 0),
-
-    // @Param: _PIV_LIM_R
-    // @DisplayName: Maximum pivot output for the right wheel
-    // @Description: Value between RCx_MIN to RCx_MAX
-    // @Range: 0 2000
-    // @Increment: 1
-    // @Units: raw
-    // @User: Standard
-    AP_GROUPINFO("_PIV_LIM_R", 16, AR_AttitudeControl, _pivot_limit_right, 0),
-
-    // @Param: _PIV_LIM_L
-    // @DisplayName: Maximum pivot output for hte left wheel
-    // @Description: Value between RCx_MIN to RCx_MAX
-    // @Range: 0 2000
-    // @Increment: 1
-    // @Units: raw
-    // @User: Standard
-    AP_GROUPINFO("_PIV_LIM_L", 17, AR_AttitudeControl, _pivot_limit_left, 0),
 
     AP_GROUPEND
 };

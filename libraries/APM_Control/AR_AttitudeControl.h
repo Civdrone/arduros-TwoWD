@@ -47,7 +47,7 @@
 // Custom defines
 #define PIVOT_PID_RATE 50 //[Hz]
 #define PIVOT_PID_TIME 1/PIVOT_PID_RATE //[s]
-#define AR_ATTCONTROL_YAW_ERROR_TIMEOUT 1000 // [ms]
+#define AR_ATTCONTROL_YAW_ERROR_TIMEOUT 200 // [ms]
 
 
 class AR_AttitudeControl {
@@ -176,9 +176,6 @@ private:
     AP_Float _pivot_accel_max;      // pivot angle acceleration max in deg/s/s
     AP_Float _steer_rate_max;       // steering rate control maximum rate in deg/s
     AP_Float _pivot_rate_max;       // pivot rate control maximum rate in deg/s
-
-    AP_Int16 _pivot_limit_right; // Maximum pivot output for the right wheel. Value between RCx_MIN to RCx_MAX
-    AP_Int16 _pivot_limit_left;  // Maximum pivot output for the left wheel. Value between RCx_MIN to RCx_MAX
 
     // steering control
     uint32_t _steer_lat_accel_last_ms;  // system time of last call to lateral acceleration controller (i.e. get_steering_out_lat_accel)
