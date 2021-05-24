@@ -17,6 +17,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include "AR_AttitudeControl.h"
 #include <AP_GPS/AP_GPS.h>
+#include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -394,12 +395,58 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
 
     AP_SUBGROUPINFO(_sailboat_heel_pid, "_SAIL_", 12, AR_AttitudeControl, AC_PID),
 
+    // @Param: _PIV_PID
+    // @DisplayName: Pivot controller
+    // @Description: set PID value for pivot controller
+    // @Range: 0 10
+    // @Increment: 0.01
+    // @User: Advanced
+
+    AP_SUBGROUPINFO(_pivot_rate_pid, "_PIV_PID_", 13, AR_AttitudeControl, AC_PID),
+
+    // @Param: _PIV_ACC_MAX
+    // @DisplayName: Pivot control angular acceleration maximum
+    // @Description: Pivot control angular acceleration maximum (in deg/s/s).  0 to disable acceleration limiting
+    // @Range: 0 1000
+    // @Increment: 0.1
+    // @Units: deg/s/s
+    // @User: Standard
+    AP_GROUPINFO("_PIV_ACC_MAX", 14, AR_AttitudeControl, _pivot_accel_max, 0),
+
+    // @Param: _PIV_RAT_MAX
+    // @DisplayName: Pivot control rotation rate maximum
+    // @Description: Pivot control rotation rate maximum in deg/s.  0 to remove rate limiting
+    // @Range: 0 1000
+    // @Increment: 0.1
+    // @Units: deg/s
+    // @User: Standard
+    AP_GROUPINFO("_PIV_RAT_MAX", 15, AR_AttitudeControl, _pivot_rate_max, 0),
+
+    // @Param: _PIV_LIM_R
+    // @DisplayName: Maximum pivot output for the right wheel
+    // @Description: Value between RCx_MIN to RCx_MAX
+    // @Range: 0 2000
+    // @Increment: 1
+    // @Units: raw
+    // @User: Standard
+    AP_GROUPINFO("_PIV_LIM_R", 16, AR_AttitudeControl, _pivot_limit_right, 0),
+
+    // @Param: _PIV_LIM_L
+    // @DisplayName: Maximum pivot output for hte left wheel
+    // @Description: Value between RCx_MIN to RCx_MAX
+    // @Range: 0 2000
+    // @Increment: 1
+    // @Units: raw
+    // @User: Standard
+    AP_GROUPINFO("_PIV_LIM_L", 17, AR_AttitudeControl, _pivot_limit_left, 0),
+
     AP_GROUPEND
 };
 
 AR_AttitudeControl::AR_AttitudeControl(AP_AHRS &ahrs) :
     _ahrs(ahrs),
     _steer_angle_p(AR_ATTCONTROL_STEER_ANG_P),
+    _pivot_rate_pid(AR_ATTCONTROL_STEER_RATE_P, AR_ATTCONTROL_STEER_RATE_I, AR_ATTCONTROL_STEER_RATE_D, AR_ATTCONTROL_STEER_RATE_FF, AR_ATTCONTROL_STEER_RATE_IMAX, 0.0f, AR_ATTCONTROL_STEER_RATE_FILT, 0.0f, AR_ATTCONTROL_DT),
     _steer_rate_pid(AR_ATTCONTROL_STEER_RATE_P, AR_ATTCONTROL_STEER_RATE_I, AR_ATTCONTROL_STEER_RATE_D, AR_ATTCONTROL_STEER_RATE_FF, AR_ATTCONTROL_STEER_RATE_IMAX, 0.0f, AR_ATTCONTROL_STEER_RATE_FILT, 0.0f, AR_ATTCONTROL_DT),
     _throttle_speed_pid(AR_ATTCONTROL_THR_SPEED_P, AR_ATTCONTROL_THR_SPEED_I, AR_ATTCONTROL_THR_SPEED_D, 0.0f, AR_ATTCONTROL_THR_SPEED_IMAX, 0.0f, AR_ATTCONTROL_THR_SPEED_FILT, 0.0f, AR_ATTCONTROL_DT),
     _pitch_to_throttle_pid(AR_ATTCONTROL_PITCH_THR_P, AR_ATTCONTROL_PITCH_THR_I, AR_ATTCONTROL_PITCH_THR_D, 0.0f, AR_ATTCONTROL_PITCH_THR_IMAX, 0.0f, AR_ATTCONTROL_PITCH_THR_FILT, 0.0f, AR_ATTCONTROL_DT),
@@ -435,25 +482,47 @@ float AR_AttitudeControl::get_steering_out_lat_accel(float desired_accel, bool m
 float AR_AttitudeControl::get_steering_out_heading(float heading_rad, float rate_max_rads, bool motor_limit_left, bool motor_limit_right, float dt)
 {
     // calculate the desired turn rate (in radians) from the angle error (also in radians)
-    float desired_rate = get_turn_rate_from_heading(heading_rad, rate_max_rads);
+    float desired_rate = get_turn_rate_from_heading(heading_rad, rate_max_rads, (motor_limit_left || motor_limit_right));
 
     return get_steering_out_rate(desired_rate, motor_limit_left, motor_limit_right, dt);
 }
 
 // return a desired turn-rate given a desired heading in radians
-float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float rate_max_rads) const
-{
-    const float yaw_error = wrap_PI(heading_rad - _ahrs.yaw);
+float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float rate_max_rads, bool pivot_motor_limit)
+{   
+    // Calculate the angle error
+    float desired_rate = wrap_PI(heading_rad - _ahrs.yaw);
 
-    // Calculate the desired turn rate (in radians) from the angle error (also in radians)
-    float desired_rate = _steer_angle_p.get_p(yaw_error);
+    // if not called recently, reset input filter and desired turn rate to actual turn rate (used for accel limiting)
+    const uint32_t now = AP_HAL::millis();
+    if ((_last_yaw_error_ms == 0) || ((now - _last_yaw_error_ms) > AR_ATTCONTROL_YAW_ERROR_TIMEOUT)) {
+        _pivot_rate_pid.reset_filter();
+        _pivot_rate_pid.reset_I();
+        _desired_turn_rate = _ahrs.get_yaw_rate_earth();
+    }
+    _last_yaw_error_ms = now;
 
-    // limit desired_rate if a custom pivot turn rate is selected, otherwise use ATC_STR_RAT_MAX
-    if (is_positive(rate_max_rads)) {
-        desired_rate = constrain_float(desired_rate, -rate_max_rads, rate_max_rads);
+    // acceleration limit desired turn rate
+    if (is_positive(_pivot_accel_max)) {
+        const float change_max = radians(_pivot_accel_max) * (PIVOT_PID_TIME);
+        desired_rate = constrain_float(desired_rate, _desired_turn_rate - change_max, _desired_turn_rate + change_max);
+    }
+    _desired_turn_rate = desired_rate;
+
+    // rate limit desired turn rate
+    if (is_positive(_pivot_rate_max)) {
+        const float pivot_rate_max_rad = radians(_pivot_rate_max);
+        _desired_turn_rate = constrain_float(_desired_turn_rate, -pivot_rate_max_rad, pivot_rate_max_rad);
     }
 
-    return desired_rate;
+    // set PID's dt
+    _pivot_rate_pid.set_dt(PIVOT_PID_TIME);
+
+    float output = _steer_rate_pid.update_all(_desired_turn_rate, _ahrs.get_yaw_rate_earth(), pivot_motor_limit);
+    
+    // constrain and return final output
+    return output;
+
 }
 
 // return a steering servo output from -1 to +1 given a

@@ -415,6 +415,8 @@ float Mode::calc_speed_nudge(float target_speed, bool reversed)
 void Mode::navigate_to_waypoint()
 {
     // update navigation controller
+    bool pivot_motor_limit = g2.motors.limit.steer_left || g2.motors.limit.steer_right;
+    g2.wp_nav.set_pivot_motor_limit(pivot_motor_limit);
     g2.wp_nav.update(rover.G_Dt);
     _distance_to_destination = g2.wp_nav.get_distance_to_destination();
 

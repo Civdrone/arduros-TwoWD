@@ -44,6 +44,11 @@
 // speed (in m/s) at or below which vehicle is considered stopped (_STOP_SPEED parameter default)
 #define AR_ATTCONTROL_STOP_SPEED_DEFAULT    0.1f
 
+// Custom defines
+#define PIVOT_PID_RATE 50 //[Hz]
+#define PIVOT_PID_TIME 1/PIVOT_PID_RATE //[s]
+#define AR_ATTCONTROL_YAW_ERROR_TIMEOUT 1000 // [ms]
+
 
 class AR_AttitudeControl {
 public:
@@ -67,7 +72,7 @@ public:
 
     // return a desired turn-rate given a desired heading in radians
     // normally the results are later passed into get_steering_out_rate
-    float get_turn_rate_from_heading(float heading_rad, float rate_max_rads) const;
+    float get_turn_rate_from_heading(float heading_rad, float rate_max_rads, bool pivot_motor_limit);
 
     // return a steering servo output given a desired yaw rate in radians/sec.
     // positive yaw is to the right
@@ -117,6 +122,7 @@ public:
 
     // low level control accessors for reporting and logging
     AC_P& get_steering_angle_p() { return _steer_angle_p; }
+    AC_PID& get_steering_pivot_pid() { return _pivot_rate_pid; }
     AC_PID& get_steering_rate_pid() { return _steer_rate_pid; }
     AC_PID& get_throttle_speed_pid() { return _throttle_speed_pid; }
     AC_PID& get_pitch_to_throttle_pid() { return _pitch_to_throttle_pid; }
@@ -156,6 +162,7 @@ private:
 
     // parameters
     AC_P     _steer_angle_p;        // steering angle controller
+    AC_PID   _pivot_rate_pid;      // steering angle pid controller
     AC_PID   _steer_rate_pid;       // steering rate controller
     AC_PID   _throttle_speed_pid;   // throttle speed controller
     AC_PID   _pitch_to_throttle_pid;// balancebot pitch controller
@@ -166,7 +173,12 @@ private:
     AP_Int8  _brake_enable;         // speed control brake enable/disable. if set to 1 a reversed output to the motors to slow the vehicle.
     AP_Float _stop_speed;           // speed control stop speed.  Motor outputs to zero once vehicle speed falls below this value
     AP_Float _steer_accel_max;      // steering angle acceleration max in deg/s/s
+    AP_Float _pivot_accel_max;      // pivot angle acceleration max in deg/s/s
     AP_Float _steer_rate_max;       // steering rate control maximum rate in deg/s
+    AP_Float _pivot_rate_max;       // pivot rate control maximum rate in deg/s
+
+    AP_Int16 _pivot_limit_right; // Maximum pivot output for the right wheel. Value between RCx_MIN to RCx_MAX
+    AP_Int16 _pivot_limit_left;  // Maximum pivot output for the left wheel. Value between RCx_MIN to RCx_MAX
 
     // steering control
     uint32_t _steer_lat_accel_last_ms;  // system time of last call to lateral acceleration controller (i.e. get_steering_out_lat_accel)
@@ -187,4 +199,7 @@ private:
     // Sailboat heel control
     AC_PID   _sailboat_heel_pid;    // Sailboat heel angle pid controller
     uint32_t _heel_controller_last_ms = 0;
+
+    // Custom values
+    uint32_t _last_yaw_error_ms;
 };

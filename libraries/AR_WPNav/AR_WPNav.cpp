@@ -106,6 +106,9 @@ AR_WPNav::AR_WPNav(AR_AttitudeControl& atc, AP_Navigation& nav_controller) :
 // update navigation
 void AR_WPNav::update(float dt)
 {
+
+     gcs().send_text(MAV_SEVERITY_INFO, "dt = %0.7f", dt);
+
     // exit immediately if no current location, origin or destination
     Location current_loc;
     float speed;
@@ -374,16 +377,15 @@ void AR_WPNav::update_distance_and_bearing_to_destination()
 // relies on update_distance_and_bearing_to_destination being called first so _wp_bearing_cd has been updated
 void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
 {
+    // update flag so that it can be cleared
     update_pivot_active_flag();
+
     // calculate desired turn rate and update desired heading
     if (_pivot_active) {
         _cross_track_error = calc_crosstrack_error(current_loc);
         _desired_heading_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;;
         _desired_lat_accel = 0.0f;
-        _desired_turn_rate_rads = _atc.get_turn_rate_from_heading(radians(_desired_heading_cd * 0.01f), radians(_pivot_rate));
-
-        // update flag so that it can be cleared
-        // update_pivot_active_flag();
+        _desired_turn_rate_rads = _atc.get_turn_rate_from_heading(radians(_desired_heading_cd * 0.01f), radians(_pivot_rate), _pivot_motor_limit);
     } else {
         // run L1 controller
         _nav_controller.set_reverse(_reversed);

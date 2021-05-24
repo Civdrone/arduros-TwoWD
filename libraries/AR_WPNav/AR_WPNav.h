@@ -84,6 +84,9 @@ public:
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
 
+    void set_pivot_motor_limit(bool pivot_motor_limit) { _pivot_motor_limit = pivot_motor_limit; }
+    bool get_pivot_motor_limit() { return _pivot_motor_limit; }
+
 private:
 
     // true if update has been called recently
@@ -155,8 +158,7 @@ private:
     // variables for reporting
     float _distance_to_destination; // distance from vehicle to final destination in meters
     bool _reached_destination;      // true once the vehicle has reached the destination
-    // uint16_t _count_near_wp {0};    // counts the number of times the vehicles is inside the waypoint radius consecutively
-    // uint8_t _timer {0};
+    bool _pivot_motor_limit;        // true if left or right motor is in his limit
 
     // object avoidance variables
     bool _oa_active;                // true if we should use alternative destination to avoid obstacles
