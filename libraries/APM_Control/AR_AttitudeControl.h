@@ -67,7 +67,7 @@ public:
 
     // return a desired turn-rate given a desired heading in radians
     // normally the results are later passed into get_steering_out_rate
-    float get_turn_rate_from_heading(float heading_rad, float rate_max_rads) const;
+    float get_turn_rate_from_heading(float heading_rad, float rate_max_rads);
 
     // return a steering servo output given a desired yaw rate in radians/sec.
     // positive yaw is to the right
@@ -187,4 +187,8 @@ private:
     // Sailboat heel control
     AC_PID   _sailboat_heel_pid;    // Sailboat heel angle pid controller
     uint32_t _heel_controller_last_ms = 0;
+
+    // PID pivot
+    float _pivot_i = 0;
+    AP_Float _steer_angle_i; // ki
 };

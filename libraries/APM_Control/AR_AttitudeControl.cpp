@@ -394,6 +394,14 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
 
     AP_SUBGROUPINFO(_sailboat_heel_pid, "_SAIL_", 12, AR_AttitudeControl, AC_PID),
 
+    // @Param: _STR_ANG_I
+    // @DisplayName: Steering control angle I gain
+    // @Description: Steering control angle I gain.  Converts the error between the desired heading/yaw (in radians) and actual heading/yaw to a desired turn rate (in rad/sec)
+    // @Range: 0 10.000
+    // @Increment: 0.1
+    // @User: Standard
+    AP_GROUPINFO("_STR_ANG_I", 13, AR_AttitudeControl, _steer_angle_i, 0.00f),
+
     AP_GROUPEND
 };
 
@@ -441,19 +449,25 @@ float AR_AttitudeControl::get_steering_out_heading(float heading_rad, float rate
 }
 
 // return a desired turn-rate given a desired heading in radians
-float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float rate_max_rads) const
+float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float rate_max_rads)
 {
     const float yaw_error = wrap_PI(heading_rad - _ahrs.yaw);
 
     // Calculate the desired turn rate (in radians) from the angle error (also in radians)
-    float desired_rate = _steer_angle_p.get_p(yaw_error);
+    float P_out = _steer_angle_p.get_p(yaw_error);
+    _pivot_i = _pivot_i + _steer_angle_i * yaw_error * 0.02;
 
+    if (is_positive(rate_max_rads)) {
+        _pivot_i = constrain_float(_pivot_i, -rate_max_rads, rate_max_rads);
+    }
+
+    float desired_rate = _pivot_i + P_out;
     // limit desired_rate if a custom pivot turn rate is selected, otherwise use ATC_STR_RAT_MAX
     if (is_positive(rate_max_rads)) {
         desired_rate = constrain_float(desired_rate, -rate_max_rads, rate_max_rads);
     }
 
-    return desired_rate;
+    return desired_rate + _pivot_i;
 }
 
 // return a steering servo output from -1 to +1 given a
