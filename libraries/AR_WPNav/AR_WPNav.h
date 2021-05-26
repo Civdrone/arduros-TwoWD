@@ -76,6 +76,7 @@ public:
     float get_default_speed() const { return _speed_max; }
     float get_radius() const { return _radius; }
     float get_pivot_rate() const { return _pivot_rate; }
+    bool get_pivot_flag() const { return _pivot_active; }
 
     // calculate stopping location using current position and attitude controller provided maximum deceleration
     // returns true on success, false on failure

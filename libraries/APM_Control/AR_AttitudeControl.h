@@ -44,6 +44,8 @@
 // speed (in m/s) at or below which vehicle is considered stopped (_STOP_SPEED parameter default)
 #define AR_ATTCONTROL_STOP_SPEED_DEFAULT    0.1f
 
+// Pivot PID
+#define PIVOT_PID_DT 0.02 // 50[hz]
 
 class AR_AttitudeControl {
 public:
@@ -191,4 +193,5 @@ private:
     // PID pivot
     float _pivot_i = 0;
     AP_Float _steer_angle_i; // ki
+    AP_Float _steer_angle_imax; // i_max
 };

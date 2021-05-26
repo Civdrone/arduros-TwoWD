@@ -440,11 +440,17 @@ void Mode::navigate_to_waypoint()
 // desired turn rate in radians/sec. Positive to the right.
 void Mode::calc_steering_from_turn_rate(float turn_rate)
 {
-    // calculate and send final steering command to motor library
-    const float steering_out = attitude_control.get_steering_out_rate(turn_rate,
-                                                                      g2.motors.limit.steer_left,
-                                                                      g2.motors.limit.steer_right,
-                                                                      rover.G_Dt);
+
+    float steering_out = turn_rate;
+
+    if(!g2.wp_nav.get_pivot_flag()){
+        // calculate and send final steering command to motor library
+        steering_out = attitude_control.get_steering_out_rate(  turn_rate,
+                                                                g2.motors.limit.steer_left,
+                                                                g2.motors.limit.steer_right,
+                                                                rover.G_Dt);
+    }
+
     g2.motors.set_steering(steering_out * 4500.0f);
 }
 
