@@ -405,10 +405,18 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Param: _STR_ANG_IMAX
     // @DisplayName: Steering control angle IMAX value.
     // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
-    // @Range: 0 360
-    // @Increment: 0.1
+    // @Range: 0 1
+    // @Increment: 0.01
     // @User: Standard
     AP_GROUPINFO("_STR_ANG_IMAX", 14, AR_AttitudeControl, _steer_angle_imax, 0.00f),
+
+    // @Param: _STR_ANG_I_DT
+    // @DisplayName: Steering control angle IMAX value.
+    // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
+    // @Range: 0 1
+    // @Increment: 0.00001
+    // @User: Standard
+    AP_GROUPINFO("_STR_ANG_I_DT", 15, AR_AttitudeControl, _steer_angle_i_dt, 0.00f),
 
     AP_GROUPEND
 };
@@ -459,24 +467,39 @@ float AR_AttitudeControl::get_steering_out_heading(float heading_rad, float rate
 // return a desired turn-rate given a desired heading in radians
 float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float rate_max_rads)
 {
-    const float yaw_error = wrap_PI(heading_rad - _ahrs.yaw);
+    // Map the values from (-M_PI, M_PI) to (-1 to 1).
+    const float yaw_error = wrap_PI(heading_rad - _ahrs.yaw) / M_PI;
+
+    const uint32_t now = AP_HAL::millis();
+    if ((_steer_pivot_last_ms == 0) || ((now - _steer_pivot_last_ms) > AR_ATTCONTROL_TIMEOUT_MS)) {
+        _pivot_i = 0;
+    }
+    _steer_pivot_last_ms = now;
 
     // Calculate the desired turn rate (in radians) from the angle error (also in radians)
     float P_out = _steer_angle_p.get_p(yaw_error);
-    _pivot_i += (_steer_angle_i * yaw_error) * PIVOT_PID_DT;
+    _pivot_i += (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
 
-    if (is_positive(_steer_angle_imax)) {
-        _pivot_i = constrain_float(_pivot_i, -_steer_angle_imax, _steer_angle_imax);
+    // steer_angle_imax needs to be a value between (-1, 1)
+    if(_pivot_i < -_steer_angle_imax){
+        _pivot_i = -_steer_angle_imax;
+    }
+    else if(_pivot_i > _steer_angle_imax){
+        _pivot_i = _steer_angle_imax;
     }
 
     float desired_rate = _pivot_i + P_out;
 
-    // limit desired_rate if a custom pivot turn rate is selected, otherwise use ATC_STR_RAT_MAX
-    if (is_positive(rate_max_rads)) {
-        desired_rate = constrain_float(desired_rate, -rate_max_rads, rate_max_rads);
+    // rate_max_rads needs to be a value between (-1, 1)
+    rate_max_rads = wrap_PI(rate_max_rads) / M_PI;
+    if(desired_rate < -rate_max_rads){
+        desired_rate = -rate_max_rads;
+    }
+    else if(desired_rate > rate_max_rads){
+        desired_rate = rate_max_rads;
     }
 
-    return desired_rate;
+    return desired_rate; // value between (-1, 1)
 }
 
 // return a steering servo output from -1 to +1 given a

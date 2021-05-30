@@ -443,6 +443,7 @@ void Mode::calc_steering_from_turn_rate(float turn_rate)
 
     float steering_out = turn_rate;
 
+    // If pivot is activated turn rate must be a value between -1 to 1
     if(!g2.wp_nav.get_pivot_flag()){
         // calculate and send final steering command to motor library
         steering_out = attitude_control.get_steering_out_rate(  turn_rate,

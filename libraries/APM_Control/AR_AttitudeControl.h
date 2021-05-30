@@ -194,4 +194,6 @@ private:
     float _pivot_i = 0;
     AP_Float _steer_angle_i; // ki
     AP_Float _steer_angle_imax; // i_max
+    AP_Float _steer_angle_i_dt; // i_dt
+    uint32_t _steer_pivot_last_ms = 0;   // system time of last call to steering rate controller
 };
