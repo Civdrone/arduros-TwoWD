@@ -34,6 +34,15 @@ Location::Location(int32_t latitude, int32_t longitude, int32_t alt_in_cm, AltFr
     set_alt_cm(alt_in_cm, frame);
 }
 
+Location::Location(int32_t latitude, int32_t longitude, int8_t latitude_hp, int8_t longitude_hp, int32_t alt_in_cm, AltFrame frame){
+  zero();
+  lat = latitude;
+  lng = longitude;
+  lat_hp = latitude_hp;
+  lng_hp = longitude_hp;
+  set_alt_cm(alt_in_cm, frame);
+}
+
 Location::Location(const Vector3f &ekf_offset_neu)
 {
     // store alt and alt frame
@@ -44,6 +53,8 @@ Location::Location(const Vector3f &ekf_offset_neu)
     if (AP::ahrs().get_origin(ekf_origin)) {
         lat = ekf_origin.lat;
         lng = ekf_origin.lng;
+        lat_hp = ekf_origin.lat_hp;
+        lng_hp = ekf_origin.lng_hp;
         offset(ekf_offset_neu.x / 100.0f, ekf_offset_neu.y / 100.0f);
     }
 }
@@ -313,7 +324,7 @@ bool Location::sanitize(const Location &defaultLoc)
 }
 
 // make sure we know what size the Location object is:
-assert_storage_size<Location, 16> _assert_storage_size_Location;
+assert_storage_size<Location, 20> _assert_storage_size_Location;
 
 
 // return bearing in centi-degrees from location to loc2

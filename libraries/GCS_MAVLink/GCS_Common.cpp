@@ -4262,6 +4262,25 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
         return handle_command_do_set_roi_sysid(packet);
     case MAV_CMD_DO_SET_HOME:
         return handle_command_int_do_set_home(packet);
+    case MAV_CMD_GET_CURRETN_POSITION:
+        {
+            AP_AHRS &ahrs = AP::ahrs();
+            UNUSED_RESULT(ahrs.get_position(global_position_current_loc));
+            #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
+            gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lat,%ld", global_position_current_loc.lat);
+            gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lat_hp,%d", global_position_current_loc.lat_hp);
+            gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lng,%ld", global_position_current_loc.lng);
+            gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lng_hp,%d", global_position_current_loc.lng_hp);
+            gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "alt,%ld", global_position_current_loc.alt);
+            #else
+            gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lat,%d", global_position_current_loc.lat);
+            gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lat_hp,%d", global_position_current_loc.lat_hp);
+            gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lng,%d", global_position_current_loc.lng);
+            gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lng_hp,%d", global_position_current_loc.lng_hp);
+            gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "alt,%d", global_position_current_loc.lng_hp);
+            #endif
+            return MAV_RESULT_ACCEPTED;
+        }
 #ifdef ENABLE_SCRIPTING
     case MAV_CMD_SCRIPTING:
         {

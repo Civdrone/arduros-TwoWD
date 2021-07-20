@@ -21,6 +21,9 @@ public:
     int32_t lat;
     int32_t lng;
 
+    int8_t lat_hp;
+    int8_t lng_hp;
+
     /// enumeration of possible altitude types
     enum class AltFrame {
         ABSOLUTE = 0,
@@ -32,6 +35,7 @@ public:
     /// constructors
     Location();
     Location(int32_t latitude, int32_t longitude, int32_t alt_in_cm, AltFrame frame);
+    Location(int32_t latitude, int32_t longitude, int8_t latitude_hp, int8_t longitude_hp, int32_t alt_in_cm, AltFrame frame);
     Location(const Vector3f &ekf_offset_neu);
 
     static void set_terrain(AP_Terrain* terrain) { _terrain = terrain; }
