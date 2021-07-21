@@ -728,9 +728,9 @@ private:
     bool havePvtMsg;
     bool haveHpposMsg = false;
     // Testing code
-    uint32_t HpposMsgInterval = 5000; //[ms]
-    uint32_t HpposMsgTime = 0; //[ms]
-    uint32_t now_HpposMsgTime = 0; //[ms]
+    // uint32_t HpposMsgInterval = 5000; //[ms]
+    // uint32_t HpposMsgTime = 0; //[ms]
+    // uint32_t now_HpposMsgTime = 0; //[ms]
 
     bool        _configure_message_rate(uint8_t msg_class, uint8_t msg_id, uint8_t rate);
     bool        _configure_valset(ConfigKey key, const void *value);
