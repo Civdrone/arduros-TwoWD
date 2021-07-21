@@ -207,6 +207,8 @@ struct log_RGPJ {
     float yaw_accuracy_deg;
     int32_t lat;
     int32_t lng;
+    int8_t lat_hp;
+    int8_t lng_hp;
     int32_t alt;
     float hacc;
     float vacc;

@@ -599,18 +599,26 @@ bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
         double theta = AP::ahrs().pitch;     //[rad]
         double psai =  AP::ahrs().yaw;       //[rad]
 
-        double err_roll_meter = (sin(phi) * _gps_antenna_height);
-        double err_pitch_meter = (sin(theta) * _gps_antenna_height);
+        double err_roll_meter = (tan(phi) * _gps_antenna_height); // corretion on y axis
+        double err_pitch_meter = (tan(theta) * _gps_antenna_height); // corretion on x axis
 
         //Rotation Matrix
-        double d_lat_meter = err_pitch_meter * cos(psai) - err_roll_meter * sin(psai);
-        double d_lon_meter = err_pitch_meter * sin(psai) + err_roll_meter * cos(psai);
-
-        double d_lat_deg = (d_lat_meter / 6371000) * RAD_TO_DEG; //[deg]
+        double d_lat_meter = err_pitch_meter * cos(psai) + err_roll_meter * sin(psai);
+        double d_lon_meter = err_pitch_meter * (-sin(psai)) + err_roll_meter * cos(psai);
+        
+        double d_lat_deg = (d_lat_meter / 6371000) * RAD_TO_DEG; //[deg] 
         double d_lng_deg = (d_lon_meter / 6371000) * RAD_TO_DEG; //[deg]
 
-        loc.lat += (int32_t)(d_lat_deg * 10000000);
-        loc.lng += (int32_t)(d_lng_deg * 10000000);
+        double lat_aux = (double)(loc.lat * 1e2 + loc.lat_hp)/1e9;
+        double lng_aux = (double)(loc.lng * 1e2 + loc.lng_hp)/1e9;
+
+        double lat = lat_aux + d_lat_deg;
+        double lng = lng_aux + d_lng_deg;
+
+        loc.lat = (int32_t)(lat*1e7);
+        loc.lat_hp = (int32_t)(lat*1e7);
+        loc.lat_hp = (int8_t)((lat*1e9) - ((double)loc.lat)*1e2);
+        loc.lng_hp = (int8_t)((lng*1e9) - ((double)loc.lng)*1e2);
     }  
 
     return success;
