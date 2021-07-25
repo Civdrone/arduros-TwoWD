@@ -594,18 +594,24 @@ bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
     }
 
     if (success) {
+
+        //Location before tilt calculation
+        loc.lat_double = ((double)loc.lat + (double)loc.lat_hp/1e2)/1e7;
+        loc.lng_double = ((double)loc.lng + (double)loc.lng_hp/1e2)/1e7;
+
         //Incline location correction
-        double phi = -AP::ahrs().roll;       //[rad]
-        double theta = AP::ahrs().pitch;     //[rad]
+        double phi = AP::ahrs().roll;       //[rad] (+)
+        double theta = AP::ahrs().pitch;     //[rad] (+)
         double psai =  AP::ahrs().yaw;       //[rad]
 
-        double err_roll_meter = (tan(phi) * _gps_antenna_height); // corretion on y axis
-        double err_pitch_meter = (tan(theta) * _gps_antenna_height); // corretion on x axis
+        double err_roll_meter = -(tan(phi) * _gps_antenna_height); // corretion on y axis (-)
+        double err_pitch_meter = (tan(theta) * _gps_antenna_height); // corretion on x axis (+)
 
         //Rotation Matrix
         double d_lat_meter = err_pitch_meter * cos(psai) + err_roll_meter * sin(psai);
         double d_lon_meter = err_pitch_meter * (-sin(psai)) + err_roll_meter * cos(psai);
         
+        //TODO::Improve this calculation
         double d_lat_deg = (d_lat_meter / 6371000) * RAD_TO_DEG; //[deg] 
         double d_lng_deg = (d_lon_meter / 6371000) * RAD_TO_DEG; //[deg]
 
