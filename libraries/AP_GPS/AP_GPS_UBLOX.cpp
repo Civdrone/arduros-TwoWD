@@ -1259,6 +1259,9 @@ AP_GPS_UBLOX::_parse_gps(void)
         state.have_horizontal_accuracy = true;
         state.have_vertical_accuracy = true;
 
+        state.location.lat_original = ((double)_buffer.hpposllh.latitude + (double)_buffer.hpposllh.latHp/1e2)/1e7;
+        state.location.lng_original = ((double)_buffer.hpposllh.longitude + (double)_buffer.hpposllh.lonHp/1e2)/1e7;
+
         // Print the message each 1 second
         // Testing code
         // now_HpposMsgTime = AP_HAL::millis();
