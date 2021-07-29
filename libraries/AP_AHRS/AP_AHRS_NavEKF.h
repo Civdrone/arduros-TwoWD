@@ -323,6 +323,8 @@ public:
         return uint8_t(active_EKF_type());
     }
 
+    static void tilt_correction(struct Location &loc, double antenna_height);
+
     // these are only out here so vehicles can reference them for parameters
 #if HAL_NAVEKF2_AVAILABLE
     NavEKF2 EKF2;

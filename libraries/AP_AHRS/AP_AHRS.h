@@ -187,6 +187,8 @@ public:
     float pitch;
     float yaw;
 
+    struct Location _hp_position;
+
     float get_roll() const { return roll; }
     float get_pitch() const { return pitch; }
     float get_yaw() const { return yaw; }

@@ -305,9 +305,7 @@ bool NavEKF3_core::getLLH(struct Location &loc) const
         // there are three modes of operation, absolute position (GPS fusion), relative position (optical flow fusion) and constant position (no aiding)
         if (filterStatus.flags.horiz_pos_abs || filterStatus.flags.horiz_pos_rel) {
             loc.lat = EKF_origin.lat;
-            loc.lat_hp = EKF_origin.lat_hp;
             loc.lng = EKF_origin.lng;
-            loc.lng_hp = EKF_origin.lng_hp;
             loc.offset(outputDataNew.position.x, outputDataNew.position.y);
             return true;
         } else {
@@ -317,16 +315,12 @@ bool NavEKF3_core::getLLH(struct Location &loc) const
                 // we have a GPS position fix to return
                 const struct Location &gpsloc = gps.location(selected_gps);
                 loc.lat = gpsloc.lat;
-                loc.lat_hp = gpsloc.lat_hp;
                 loc.lng = gpsloc.lng;
-                loc.lng_hp = gpsloc.lng_hp;
                 return true;
             } else {
                 // if no GPS fix, provide last known position before entering the mode
                 loc.lat = EKF_origin.lat;
-                loc.lat_hp = EKF_origin.lat_hp;
                 loc.lng = EKF_origin.lng;
-                loc.lng_hp = EKF_origin.lng_hp;
                 if (PV_AidingMode == AID_NONE) {
                     loc.offset(lastKnownPositionNE.x, lastKnownPositionNE.y);
                 } else {

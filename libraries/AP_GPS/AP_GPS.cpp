@@ -763,6 +763,10 @@ void AP_GPS::update_instance(uint8_t instance)
         // we don't yet know the GPS type of this one, or it has timed
         // out and needs to be re-initialised
         detect_instance(instance);
+        if(instance == 1)
+        {
+            drivers[instance]->set_hp_position(&hp_position);
+        }
         return;
     }
 

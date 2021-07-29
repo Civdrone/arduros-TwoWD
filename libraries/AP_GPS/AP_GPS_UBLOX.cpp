@@ -1252,6 +1252,13 @@ AP_GPS_UBLOX::_parse_gps(void)
         state.location.alt    = _buffer.hpposllh.altitude_msl / 10;
         state.location.lng_hp = _buffer.hpposllh.lonHp;
         state.location.lat_hp = _buffer.hpposllh.latHp;
+
+        hp_position->lng    = _buffer.hpposllh.longitude;
+        hp_position->lat    = _buffer.hpposllh.latitude;
+        hp_position->alt    = _buffer.hpposllh.altitude_msl / 10;
+        hp_position->lng_hp = _buffer.hpposllh.lonHp;
+        hp_position->lat_hp = _buffer.hpposllh.latHp;
+ 
         state.status          = next_fix;
         _new_position = true;
         state.horizontal_accuracy = _buffer.hpposllh.horizontal_accuracy*1.0e-3f;
@@ -1259,17 +1266,14 @@ AP_GPS_UBLOX::_parse_gps(void)
         state.have_horizontal_accuracy = true;
         state.have_vertical_accuracy = true;
 
-        state.location.lat_original = ((double)_buffer.hpposllh.latitude + (double)_buffer.hpposllh.latHp/1e2)/1e7;
-        state.location.lng_original = ((double)_buffer.hpposllh.longitude + (double)_buffer.hpposllh.lonHp/1e2)/1e7;
-
-        // Print the message each 1 second
+        // Print the message each 5 second
         // Testing code
-        // now_HpposMsgTime = AP_HAL::millis();
-        // if(now_HpposMsgTime - HpposMsgTime >= HpposMsgInterval)
-        // {
-        //     gcs().send_text(MAV_SEVERITY_INFO, "case MSG_HPPOSLLH lng: %d, lat: %d, lng_hp: %d, lat_hp: %d", (int)state.location.lng, (int)state.location.lat, (int)state.location.lng_hp, (int)state.location.lat_hp);
-        //     HpposMsgTime = AP_HAL::millis();
-        // }
+        now_HpposMsgTime = AP_HAL::millis();
+        if(now_HpposMsgTime - HpposMsgTime >= HpposMsgInterval)
+        {
+            gcs().send_text(MAV_SEVERITY_INFO, "case MSG_HPPOSLLH lng: %d, lat: %d, lng_hp: %d, lat_hp: %d", (int)state.location.lng, (int)state.location.lat, (int)state.location.lng_hp, (int)state.location.lat_hp);
+            HpposMsgTime = AP_HAL::millis();
+        }
 
 #if UBLOX_FAKE_3DLOCK
         state.location.lng = 1491652300L;

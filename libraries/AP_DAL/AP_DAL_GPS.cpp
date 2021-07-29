@@ -18,9 +18,7 @@ const Location &AP_DAL_GPS::location(uint8_t instance) const
 {
     Location &loc = tmp_location[instance];
     loc.lat = _RGPJ[instance].lat;
-    loc.lat_hp = _RGPJ[instance].lat_hp;
     loc.lng = _RGPJ[instance].lng;
-    loc.lng_hp = _RGPJ[instance].lng_hp;
     loc.alt = _RGPJ[instance].alt;
     return loc;
 }
@@ -47,9 +45,7 @@ void AP_DAL_GPS::start_frame()
         const Location &loc = gps.location(i);
         RGPJ.last_message_time_ms = gps.last_message_time_ms(i);
         RGPJ.lat = loc.lat;
-        RGPJ.lat_hp = loc.lat_hp;
         RGPJ.lng = loc.lng;
-        RGPJ.lng_hp = loc.lng_hp;
         RGPJ.alt = loc.alt;
         RGPI.have_vertical_velocity = gps.have_vertical_velocity(i);
 

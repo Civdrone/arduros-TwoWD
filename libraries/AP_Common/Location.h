@@ -24,11 +24,6 @@ public:
     int8_t lat_hp;
     int8_t lng_hp;
 
-    double lat_double;
-    double lng_double;
-    double lat_original;
-    double lng_original;
-
     /// enumeration of possible altitude types
     enum class AltFrame {
         ABSOLUTE = 0,

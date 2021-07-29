@@ -540,10 +540,14 @@ void AP_AHRS_NavEKF::reset_attitude(const float &_roll, const float &_pitch, con
 #endif
 }
 
+// Testing code
+uint32_t position_interval = 5000; //[ms]
+uint32_t position_time = 0; //[ms]
+uint32_t now_position_time = 0; //[ms]
+
 // dead-reckoning support
 bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
 {
-    
     bool useFallback = true;
     bool success = false;
     
@@ -595,36 +599,33 @@ bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
 
     if (success) {
 
-        //Location before tilt calculation
-        loc.lat_double = ((double)loc.lat + (double)loc.lat_hp/1e2)/1e7;
-        loc.lng_double = ((double)loc.lng + (double)loc.lng_hp/1e2)/1e7;
+        auto &gps = AP::gps();
+        struct Location hp_position = gps.get_hp_position();
 
-        //Incline location correction
-        double phi = AP::ahrs().roll;       //[rad] (+)
-        double theta = AP::ahrs().pitch;     //[rad] (+)
-        double psai =  AP::ahrs().yaw;       //[rad]
+        now_position_time = AP_HAL::millis();
+        if(now_position_time - position_time >= position_interval)
+        {
+            gcs().send_text(MAV_SEVERITY_INFO, "EKF position before --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
+                (int)loc.lat, (int)loc.lng, (int)loc.lat_hp, (int)loc.lng_hp);
+            gcs().send_text(MAV_SEVERITY_INFO, "Ublox position before --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
+                (int)hp_position.lat, (int)hp_position.lng, (int)hp_position.lat_hp, (int)hp_position.lng_hp);
+        }
 
-        double err_roll_meter = -(tan(phi) * _gps_antenna_height); // corretion on y axis (-)
-        double err_pitch_meter = (tan(theta) * _gps_antenna_height); // corretion on x axis (+)
+        tilt_correction(loc, _gps_antenna_height);
+        tilt_correction(hp_position, _gps_antenna_height);
+        AP::ahrs()._hp_position = hp_position;
 
-        //Rotation Matrix
-        double d_lat_meter = err_pitch_meter * cos(psai) + err_roll_meter * sin(psai);
-        double d_lon_meter = err_pitch_meter * (-sin(psai)) + err_roll_meter * cos(psai);
-        
-        //TODO::Improve this calculation
-        double d_lat_deg = (d_lat_meter / 6371000) * RAD_TO_DEG; //[deg] 
-        double d_lng_deg = (d_lon_meter / 6371000) * RAD_TO_DEG; //[deg]
+        if(now_position_time - position_time >= position_interval)
+        {
+            gcs().send_text(MAV_SEVERITY_INFO, "EKF position after --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
+                (int)loc.lat, (int)loc.lng, (int)loc.lat_hp, (int)loc.lng_hp);
+            gcs().send_text(MAV_SEVERITY_INFO, "Ublox position after --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
+                (int)hp_position.lat, (int)hp_position.lng, (int)hp_position.lat_hp, (int)hp_position.lng_hp);
+            gcs().send_text(MAV_SEVERITY_INFO, "AHRS position after --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
+                (int)AP::ahrs()._hp_position.lat, (int)AP::ahrs()._hp_position.lng, (int)AP::ahrs()._hp_position.lat_hp, (int)AP::ahrs()._hp_position.lng_hp);
 
-        double lat_aux = (double)(loc.lat * 1e2 + loc.lat_hp)/1e9;
-        double lng_aux = (double)(loc.lng * 1e2 + loc.lng_hp)/1e9;
-
-        double lat = lat_aux + d_lat_deg;
-        double lng = lng_aux + d_lng_deg;
-
-        loc.lat = (int32_t)(lat*1e7);
-        loc.lat_hp = (int32_t)(lat*1e7);
-        loc.lat_hp = (int8_t)((lat*1e9) - ((double)loc.lat)*1e2);
-        loc.lng_hp = (int8_t)((lng*1e9) - ((double)loc.lng)*1e2);
+            position_time = AP_HAL::millis();
+        }
     }  
 
     return success;
@@ -2853,3 +2854,48 @@ void AP_AHRS_NavEKF::set_alt_measurement_noise(float noise)
 }
 
 #endif // AP_AHRS_NAVEKF_AVAILABLE
+
+void AP_AHRS_NavEKF::tilt_correction(struct Location &loc, double antenna_height)
+{
+    //Incline location correction
+    double roll = AP::ahrs().roll;       //[rad] (+)
+    double pitch = AP::ahrs().pitch;     //[rad] (+)
+    double yaw =  AP::ahrs().yaw;       //[rad]
+
+    double err_roll_meter = -(tan(roll) * antenna_height); // corretion on y axis (-)
+    double err_pitch_meter = (tan(pitch) * antenna_height); // corretion on x axis (+)
+
+    //Rotation Matrix
+    double d_lat_meter = err_pitch_meter * cos(yaw) - err_roll_meter * sin(yaw);
+    double d_lng_meter = err_pitch_meter * sin(yaw) + err_roll_meter * cos(yaw);
+    
+    //TODO::Improve this calculation
+    double d_lat_deg = (d_lat_meter / 6371000) * RAD_TO_DEG; //[deg] 
+    double d_lng_deg = (d_lng_meter / 6371000) * RAD_TO_DEG; //[deg]
+
+    double lat_aux = (double)((double)loc.lat * 1e2 + (double)loc.lat_hp)/1e9;
+    double lng_aux = (double)((double)loc.lng * 1e2 + (double)loc.lng_hp)/1e9;
+
+    double lat = lat_aux + d_lat_deg;
+    double lng = lng_aux + d_lng_deg;
+
+    // Print the message each 5 second
+    // Testing code
+    now_position_time = AP_HAL::millis();
+    if(now_position_time - position_time >= position_interval)
+    {
+        gcs().send_text(MAV_SEVERITY_INFO, "angles --> roll: %.8f, pitch: %.8f, yaw: %.8f", 
+            AP::ahrs().roll, AP::ahrs().pitch, AP::ahrs().yaw);
+        gcs().send_text(MAV_SEVERITY_INFO, "error --> err_roll_meter: %.8f, err_pitch_meter: %.8f", 
+            err_roll_meter, err_pitch_meter);
+        gcs().send_text(MAV_SEVERITY_INFO, "delta --> d_lat_meter: %.8f, d_lng_meter: %.8f", 
+            d_lat_meter, d_lng_meter);
+        gcs().send_text(MAV_SEVERITY_INFO, "delta --> d_lat_deg: %.8f, d_lng_deg: %.8f", 
+            d_lat_deg, d_lng_deg);
+    }
+
+    loc.lat = (int32_t)(lat*1e7);
+    loc.lng = (int32_t)(lng*1e7);
+    loc.lat_hp = (int8_t)((lat*1e9) - ((double)loc.lat)*1e2);
+    loc.lng_hp = (int8_t)((lng*1e9) - ((double)loc.lng)*1e2);
+}

@@ -82,10 +82,16 @@ public:
         return _last_itow;
     }
 
+    void set_hp_position(struct Location *loc)
+    {
+        hp_position = loc;
+    }
+
 protected:
     AP_HAL::UARTDriver *port;           ///< UART we are attached to
     AP_GPS &gps;                        ///< access to frontend (for parameters)
     AP_GPS::GPS_State &state;           ///< public state for this instance
+    struct Location *hp_position = nullptr;
 
     // common utility functions
     int32_t swap_int32(int32_t v) const;

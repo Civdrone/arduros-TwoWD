@@ -170,6 +170,7 @@ void AR_WPNav::update(float dt)
 
     if(near_wp){
         
+        gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m]", _distance_to_destination);
         _desired_speed_limited = _atc.get_desired_speed_accel_limited(0.0f, dt);
         _desired_lat_accel = 0.0f;
         _desired_turn_rate_rads = 0.0f;

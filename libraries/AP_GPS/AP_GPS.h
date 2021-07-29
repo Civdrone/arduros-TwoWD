@@ -506,6 +506,8 @@ public:
     // get iTOW, if supported, zero otherwie
     uint32_t get_itow(uint8_t instance) const;
 
+    struct Location get_hp_position() { return hp_position; }
+
 protected:
 
     // configuration parameters
@@ -568,6 +570,7 @@ private:
     GPS_State state[GPS_MAX_INSTANCES];
     AP_GPS_Backend *drivers[GPS_MAX_RECEIVERS];
     AP_HAL::UARTDriver *_port[GPS_MAX_RECEIVERS];
+    struct Location hp_position;
 
     /// primary GPS instance
     uint8_t primary_instance;
