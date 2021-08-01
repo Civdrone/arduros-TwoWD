@@ -1268,12 +1268,12 @@ AP_GPS_UBLOX::_parse_gps(void)
 
         // Print the message each 5 second
         // Testing code
-        now_HpposMsgTime = AP_HAL::millis();
-        if(now_HpposMsgTime - HpposMsgTime >= HpposMsgInterval)
-        {
-            gcs().send_text(MAV_SEVERITY_INFO, "case MSG_HPPOSLLH lng: %d, lat: %d, lng_hp: %d, lat_hp: %d", (int)state.location.lng, (int)state.location.lat, (int)state.location.lng_hp, (int)state.location.lat_hp);
-            HpposMsgTime = AP_HAL::millis();
-        }
+        // now_HpposMsgTime = AP_HAL::millis();
+        // if(now_HpposMsgTime - HpposMsgTime >= HpposMsgInterval)
+        // {
+        //     gcs().send_text(MAV_SEVERITY_INFO, "case MSG_HPPOSLLH lng: %d, lat: %d, lng_hp: %d, lat_hp: %d", (int)state.location.lng, (int)state.location.lat, (int)state.location.lng_hp, (int)state.location.lat_hp);
+        //     HpposMsgTime = AP_HAL::millis();
+        // }
 
 #if UBLOX_FAKE_3DLOCK
         state.location.lng = 1491652300L;

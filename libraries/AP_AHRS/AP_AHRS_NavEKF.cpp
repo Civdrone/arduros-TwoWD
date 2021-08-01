@@ -541,9 +541,9 @@ void AP_AHRS_NavEKF::reset_attitude(const float &_roll, const float &_pitch, con
 }
 
 // Testing code
-uint32_t position_interval = 5000; //[ms]
-uint32_t position_time = 0; //[ms]
-uint32_t now_position_time = 0; //[ms]
+// uint32_t position_interval = 5000; //[ms]
+// uint32_t position_time = 0; //[ms]
+// uint32_t now_position_time = 0; //[ms]
 
 // dead-reckoning support
 bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
@@ -602,30 +602,30 @@ bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
         auto &gps = AP::gps();
         struct Location hp_position = gps.get_hp_position();
 
-        now_position_time = AP_HAL::millis();
-        if(now_position_time - position_time >= position_interval)
-        {
-            gcs().send_text(MAV_SEVERITY_INFO, "EKF position before --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
-                (int)loc.lat, (int)loc.lng, (int)loc.lat_hp, (int)loc.lng_hp);
-            gcs().send_text(MAV_SEVERITY_INFO, "Ublox position before --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
-                (int)hp_position.lat, (int)hp_position.lng, (int)hp_position.lat_hp, (int)hp_position.lng_hp);
-        }
+        // now_position_time = AP_HAL::millis();
+        // if(now_position_time - position_time >= position_interval)
+        // {
+        //     gcs().send_text(MAV_SEVERITY_INFO, "EKF position before --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
+        //         (int)loc.lat, (int)loc.lng, (int)loc.lat_hp, (int)loc.lng_hp);
+        //     gcs().send_text(MAV_SEVERITY_INFO, "Ublox position before --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
+        //         (int)hp_position.lat, (int)hp_position.lng, (int)hp_position.lat_hp, (int)hp_position.lng_hp);
+        // }
 
         tilt_correction(loc, _gps_antenna_height);
         tilt_correction(hp_position, _gps_antenna_height);
         AP::ahrs()._hp_position = hp_position;
 
-        if(now_position_time - position_time >= position_interval)
-        {
-            gcs().send_text(MAV_SEVERITY_INFO, "EKF position after --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
-                (int)loc.lat, (int)loc.lng, (int)loc.lat_hp, (int)loc.lng_hp);
-            gcs().send_text(MAV_SEVERITY_INFO, "Ublox position after --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
-                (int)hp_position.lat, (int)hp_position.lng, (int)hp_position.lat_hp, (int)hp_position.lng_hp);
-            gcs().send_text(MAV_SEVERITY_INFO, "AHRS position after --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
-                (int)AP::ahrs()._hp_position.lat, (int)AP::ahrs()._hp_position.lng, (int)AP::ahrs()._hp_position.lat_hp, (int)AP::ahrs()._hp_position.lng_hp);
+        // if(now_position_time - position_time >= position_interval)
+        // {
+        //     gcs().send_text(MAV_SEVERITY_INFO, "EKF position after --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
+        //         (int)loc.lat, (int)loc.lng, (int)loc.lat_hp, (int)loc.lng_hp);
+        //     gcs().send_text(MAV_SEVERITY_INFO, "Ublox position after --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
+        //         (int)hp_position.lat, (int)hp_position.lng, (int)hp_position.lat_hp, (int)hp_position.lng_hp);
+        //     gcs().send_text(MAV_SEVERITY_INFO, "AHRS position after --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
+        //         (int)AP::ahrs()._hp_position.lat, (int)AP::ahrs()._hp_position.lng, (int)AP::ahrs()._hp_position.lat_hp, (int)AP::ahrs()._hp_position.lng_hp);
 
-            position_time = AP_HAL::millis();
-        }
+        //     position_time = AP_HAL::millis();
+        // }
     }  
 
     return success;
@@ -2881,18 +2881,18 @@ void AP_AHRS_NavEKF::tilt_correction(struct Location &loc, double antenna_height
 
     // Print the message each 5 second
     // Testing code
-    now_position_time = AP_HAL::millis();
-    if(now_position_time - position_time >= position_interval)
-    {
-        gcs().send_text(MAV_SEVERITY_INFO, "angles --> roll: %.8f, pitch: %.8f, yaw: %.8f", 
-            AP::ahrs().roll, AP::ahrs().pitch, AP::ahrs().yaw);
-        gcs().send_text(MAV_SEVERITY_INFO, "error --> err_roll_meter: %.8f, err_pitch_meter: %.8f", 
-            err_roll_meter, err_pitch_meter);
-        gcs().send_text(MAV_SEVERITY_INFO, "delta --> d_lat_meter: %.8f, d_lng_meter: %.8f", 
-            d_lat_meter, d_lng_meter);
-        gcs().send_text(MAV_SEVERITY_INFO, "delta --> d_lat_deg: %.8f, d_lng_deg: %.8f", 
-            d_lat_deg, d_lng_deg);
-    }
+    // now_position_time = AP_HAL::millis();
+    // if(now_position_time - position_time >= position_interval)
+    // {
+    //     gcs().send_text(MAV_SEVERITY_INFO, "angles --> roll: %.8f, pitch: %.8f, yaw: %.8f", 
+    //         AP::ahrs().roll, AP::ahrs().pitch, AP::ahrs().yaw);
+    //     gcs().send_text(MAV_SEVERITY_INFO, "error --> err_roll_meter: %.8f, err_pitch_meter: %.8f", 
+    //         err_roll_meter, err_pitch_meter);
+    //     gcs().send_text(MAV_SEVERITY_INFO, "delta --> d_lat_meter: %.8f, d_lng_meter: %.8f", 
+    //         d_lat_meter, d_lng_meter);
+    //     gcs().send_text(MAV_SEVERITY_INFO, "delta --> d_lat_deg: %.8f, d_lng_deg: %.8f", 
+    //         d_lat_deg, d_lng_deg);
+    // }
 
     loc.lat = (int32_t)(lat*1e7);
     loc.lng = (int32_t)(lng*1e7);
