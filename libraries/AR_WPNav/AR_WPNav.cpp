@@ -93,6 +93,15 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("ANGLE_ACCU", 7, AR_WPNav, _pivot_angle_accuracy, 10),
 
+    // @Param: CHECK_TIMES
+    // @DisplayName: Amount of consecutive times inside the radius wp.
+    // @Description: Vehicle will move until being an amount of consecutive times inside the radius wp.
+    // @Units: none
+    // @Range: 0 2000
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("CHECK_TIMES", 8, AR_WPNav, _check_times, 0),
+
     AP_GROUPEND
 };
 
@@ -102,6 +111,12 @@ AR_WPNav::AR_WPNav(AR_AttitudeControl& atc, AP_Navigation& nav_controller) :
 {
     AP_Param::setup_object_defaults(this, var_info);
 }
+
+// // Testing code
+// uint32_t update_interval = 1000; //[ms]
+// uint32_t update_time = 0; //[ms]
+// uint32_t now_update_time = 0; //[ms]
+// uint32_t update_counter = 0;
 
 // update navigation
 void AR_WPNav::update(float dt)
@@ -165,19 +180,40 @@ void AR_WPNav::update(float dt)
         }
     }
 
+    // update_counter++;
+    // now_update_time = AP_HAL::millis();
+    // if(now_update_time - update_time >= update_interval)
+    // {
+    //     // gcs().send_text(MAV_SEVERITY_INFO, "EKF position after --> lat: %d, lng: %d, lat_hp: %d, lng_hp: %d", 
+    //     //     (int)loc.lat, (int)loc.lng, (int)loc.lat_hp, (int)loc.lng_hp);
+    //     gcs().send_text(MAV_SEVERITY_INFO, "update_counter = %d", update_counter);
+    //     update_counter = 0;
+    //     update_time = AP_HAL::millis();
+    // }
+
     // check if vehicle has reached the destination
     const bool near_wp = _distance_to_destination <= _radius;
 
     if(near_wp){
-        
-        gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m]", _distance_to_destination);
-        _desired_speed_limited = _atc.get_desired_speed_accel_limited(0.0f, dt);
-        _desired_lat_accel = 0.0f;
-        _desired_turn_rate_rads = 0.0f;
-        // _count_near_wp = 0;
-        _reached_destination = true;
+        if(_count_near_wp >= _check_times){
+            gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m]", _distance_to_destination);
+            _desired_speed_limited = _atc.get_desired_speed_accel_limited(0.0f, dt);
+            //TODO: If I want to stop lateral acceletarion:
+            /*
+                _desired_lat_accel = 0.0f;
+                _desired_turn_rate_rads = 0.0f;
+            */
+            _desired_lat_accel = 0.0f;
+            _desired_turn_rate_rads = 0.0f;
+            _count_near_wp = 0;
+            _reached_destination = true;
+        }
+        gcs().send_text(MAV_SEVERITY_INFO, "_count_near_wp = %d", _count_near_wp);
+        _count_near_wp++;
         return;
     }
+
+    _count_near_wp = 0;
 
     // handle stopping vehicle if avoidance has failed
     if (stop_vehicle) {

@@ -125,7 +125,8 @@ private:
     AP_Int16 _pivot_angle;          // angle error that leads to pivot turn
     AP_Int16 _pivot_rate;           // desired turn rate during pivot turns in deg/sec
     AP_Int16 _pivot_angle_accuracy; // angle error that stops pivot turn
-
+    AP_Int16 _check_times;          // Amount of consecutive times inside the radius wp.
+    
     // references
     AR_AttitudeControl& _atc;       // rover attitude control library
     AP_Navigation& _nav_controller; // navigation controller (aka L1 controller)
@@ -156,7 +157,7 @@ private:
     // variables for reporting
     float _distance_to_destination; // distance from vehicle to final destination in meters
     bool _reached_destination;      // true once the vehicle has reached the destination
-    // uint16_t _count_near_wp {0};    // counts the number of times the vehicles is inside the waypoint radius consecutively
+    uint16_t _count_near_wp {0};    // counts the number of times the vehicles is inside the waypoint radius consecutively
     // uint8_t _timer {0};
 
     // object avoidance variables
