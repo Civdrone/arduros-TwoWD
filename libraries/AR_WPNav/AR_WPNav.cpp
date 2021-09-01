@@ -144,6 +144,7 @@ AR_WPNav::AR_WPNav(AR_AttitudeControl &atc, AP_Navigation &nav_controller) : _at
                                                                              _nav_controller(nav_controller)
 {
     AP_Param::setup_object_defaults(this, var_info);
+    _timer_time = AP_HAL::millis();
 }
 
 // update navigation
@@ -622,7 +623,8 @@ void AR_WPNav::reset_memebers()
 {
     _slow_radius_flag = false;
     _timer_flag = false;
-    _desired_speed = _desired_speed_gcs;
+    // _desired_speed = _desired_speed_gcs;
+    _desired_speed = 0.6;
     gcs().send_text(MAV_SEVERITY_INFO, "reset_memebers(): _desired_speed = %f", _desired_speed);
 }
 

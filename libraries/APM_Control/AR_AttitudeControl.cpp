@@ -524,7 +524,8 @@ float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float ra
         Up = -Up;
     }
 
-    if (fabsf(_ahrs.get_yaw_rate_earth()) < ((_steer_angle_degree * M_PI / 180.0f) / _steer_angle_deadTime))
+    // if (fabsf(_ahrs.get_yaw_rate_earth()) < ((_steer_angle_degree * M_PI / 180.0f) / _steer_angle_deadTime))
+    if (fabs(yaw_error) < 20)
     {
 
         _stuck_pivot_now = AP_HAL::millis();

@@ -174,7 +174,7 @@ private:
     uint32_t _time_now = 0;
     uint32_t _timer_time = 0;
     bool _timer_flag = false;
-    float _desired_speed_gcs; // Desired speed seted from gcs
+    float _desired_speed_gcs = 0.6; // Desired speed seted from gcs
     // uint16_t _count_near_wp {0};    // counts the number of times the vehicles is inside the waypoint radius consecutively
     // uint8_t _timer {0};
 
