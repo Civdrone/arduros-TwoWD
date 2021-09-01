@@ -7,11 +7,11 @@
 
 const float AR_WPNAV_HEADING_UNKNOWN = 99999.0f; // used to indicate to set_desired_location method that next leg's heading is unknown
 
-class AR_WPNav {
+class AR_WPNav
+{
 public:
-
     // constructor
-    AR_WPNav(AR_AttitudeControl& atc, AP_Navigation& nav_controller);
+    AR_WPNav(AR_AttitudeControl &atc, AP_Navigation &nav_controller);
 
     // update navigation
     void update(float dt);
@@ -20,7 +20,11 @@ public:
     float get_desired_speed() const { return _desired_speed; }
 
     // set desired speed in m/s
-    void set_desired_speed(float speed) { _desired_speed = MAX(speed, 0.0f); }
+    void set_desired_speed(float speed)
+    {
+        _desired_speed = MAX(speed, 0.0f);
+        _desired_speed_gcs = _desired_speed;
+    }
 
     // restore desired speed to default from parameter value
     void set_desired_speed_to_default() { _desired_speed = _speed_max; }
@@ -38,13 +42,13 @@ public:
 
     // set desired location
     // next_leg_bearing_cd should be heading to the following waypoint (used to slow the vehicle in order to make the turn)
-    bool set_desired_location(const struct Location& destination, float next_leg_bearing_cd = AR_WPNAV_HEADING_UNKNOWN)  WARN_IF_UNUSED;
+    bool set_desired_location(const struct Location &destination, float next_leg_bearing_cd = AR_WPNAV_HEADING_UNKNOWN) WARN_IF_UNUSED;
 
     // set desired location to a reasonable stopping point, return true on success
-    bool set_desired_location_to_stopping_location()  WARN_IF_UNUSED;
+    bool set_desired_location_to_stopping_location() WARN_IF_UNUSED;
 
     // set desired location as offset from the EKF origin, return true on success
-    bool set_desired_location_NED(const Vector3f& destination, float next_leg_bearing_cd = AR_WPNAV_HEADING_UNKNOWN) WARN_IF_UNUSED;
+    bool set_desired_location_NED(const Vector3f &destination, float next_leg_bearing_cd = AR_WPNAV_HEADING_UNKNOWN) WARN_IF_UNUSED;
 
     // true if vehicle has reached desired location. defaults to true because this is normally used by missions and we do not want the mission to become stuck
     bool reached_destination() const { return _reached_destination; }
@@ -80,13 +84,12 @@ public:
 
     // calculate stopping location using current position and attitude controller provided maximum deceleration
     // returns true on success, false on failure
-    bool get_stopping_location(Location& stopping_loc) WARN_IF_UNUSED;
+    bool get_stopping_location(Location &stopping_loc) WARN_IF_UNUSED;
 
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
 
 private:
-
     // true if update has been called recently
     bool is_active() const;
 
@@ -95,7 +98,7 @@ private:
 
     // calculate steering output to drive along line from origin to destination waypoint
     // relies on update_distance_and_bearing_to_destination being called first
-    void update_steering(const Location& current_loc, float current_speed);
+    void update_steering(const Location &current_loc, float current_speed);
 
     // calculated desired speed(in m/s) based on yaw error and lateral acceleration and/or distance to a waypoint
     // relies on update_distance_and_bearing_to_destination and update_steering being run so these internal members
@@ -115,7 +118,13 @@ private:
     void apply_speed_min(float &desired_speed) const;
 
     // calculate the crosstrack error (does not rely on L1 controller)
-    float calc_crosstrack_error(const Location& current_loc) const;
+    float calc_crosstrack_error(const Location &current_loc) const;
+
+    // Reset slow radius flag, timer flag and the desired speed
+    void reset_memebers();
+
+    // Stop vehicle
+    void stop_vehicle(float dt);
 
     // parameters
     AP_Float _speed_max;            // target speed between waypoints in m/s
@@ -125,44 +134,54 @@ private:
     AP_Int16 _pivot_angle;          // angle error that leads to pivot turn
     AP_Int16 _pivot_rate;           // desired turn rate during pivot turns in deg/sec
     AP_Int16 _pivot_angle_accuracy; // angle error that stops pivot turn
+    AP_Float _slow_radius;          // Vehicle will slow and pivot at this distance
+    AP_Float _slow_velocity;        // Vehicle will change the velocity at slow_radius distance from the point
+    AP_Float _reach_interval;       // Amount of time that the vehicle need to continue after reaching the waypoint radius
+    AP_Int16 _time_flag;            // angle error that stops pivot turn
+    AP_Int16 _pivot_flag;           // angle error that stops pivot turn
 
     // references
-    AR_AttitudeControl& _atc;       // rover attitude control library
-    AP_Navigation& _nav_controller; // navigation controller (aka L1 controller)
+    AR_AttitudeControl &_atc;       // rover attitude control library
+    AP_Navigation &_nav_controller; // navigation controller (aka L1 controller)
 
     // variables held in vehicle code (for now)
-    float _turn_max_mss;            // lateral acceleration maximum in m/s/s
-    float _turn_radius;             // vehicle turn radius in meters
-    bool _pivot_possible;           // true if vehicle can pivot
-    bool _pivot_active;             // true if vehicle is currently pivoting
+    float _turn_max_mss;  // lateral acceleration maximum in m/s/s
+    float _turn_radius;   // vehicle turn radius in meters
+    bool _pivot_possible; // true if vehicle can pivot
+    bool _pivot_active;   // true if vehicle is currently pivoting
 
     // variables for navigation
-    uint32_t _last_update_ms;       // system time of last call to update
-    Location _origin;               // origin Location (vehicle will travel from the origin to the destination)
-    Location _destination;          // destination Location when in Guided_WP
-    bool _orig_and_dest_valid;      // true if the origin and destination have been set
-    bool _reversed;                 // execute the mission by backing up
-    float _desired_speed_final;     // desired speed in m/s when we reach the destination
+    uint32_t _last_update_ms;   // system time of last call to update
+    Location _origin;           // origin Location (vehicle will travel from the origin to the destination)
+    Location _destination;      // destination Location when in Guided_WP
+    bool _orig_and_dest_valid;  // true if the origin and destination have been set
+    bool _reversed;             // execute the mission by backing up
+    float _desired_speed_final; // desired speed in m/s when we reach the destination
 
     // main outputs from navigation library
-    float _desired_speed;           // desired speed in m/s
-    float _desired_speed_limited;   // desired speed (above) but accel/decel limited and reduced to keep vehicle within _overshoot of line
-    float _desired_turn_rate_rads;  // desired turn-rate in rad/sec (negative is counter clockwise, positive is clockwise)
-    float _desired_lat_accel;       // desired lateral acceleration (for reporting only)
-    float _desired_heading_cd;      // desired heading (back towards line between origin and destination)
-    float _wp_bearing_cd;           // heading to waypoint in centi-degrees
-    float _cross_track_error;       // cross track error (in meters).  distance from current position to closest point on line between origin and destination
+    float _desired_speed;          // desired speed in m/s
+    float _desired_speed_limited;  // desired speed (above) but accel/decel limited and reduced to keep vehicle within _overshoot of line
+    float _desired_turn_rate_rads; // desired turn-rate in rad/sec (negative is counter clockwise, positive is clockwise)
+    float _desired_lat_accel;      // desired lateral acceleration (for reporting only)
+    float _desired_heading_cd;     // desired heading (back towards line between origin and destination)
+    float _wp_bearing_cd;          // heading to waypoint in centi-degrees
+    float _cross_track_error;      // cross track error (in meters).  distance from current position to closest point on line between origin and destination
 
     // variables for reporting
     float _distance_to_destination; // distance from vehicle to final destination in meters
     bool _reached_destination;      // true once the vehicle has reached the destination
+    bool _slow_radius_flag;
+    uint32_t _time_now = 0;
+    uint32_t _timer_time = 0;
+    bool _timer_flag = false;
+    float _desired_speed_gcs; // Desired speed seted from gcs
     // uint16_t _count_near_wp {0};    // counts the number of times the vehicles is inside the waypoint radius consecutively
     // uint8_t _timer {0};
 
     // object avoidance variables
-    bool _oa_active;                // true if we should use alternative destination to avoid obstacles
-    Location _oa_origin;            // intermediate origin during avoidance
-    Location _oa_destination;       // intermediate destination during avoidance
+    bool _oa_active;                   // true if we should use alternative destination to avoid obstacles
+    Location _oa_origin;               // intermediate origin during avoidance
+    Location _oa_destination;          // intermediate destination during avoidance
     float _oa_distance_to_destination; // OA (object avoidance) distance from vehicle to _oa_destination in meters
-    float _oa_wp_bearing_cd;        // OA adjusted heading to _oa_destination in centi-degrees
+    float _oa_wp_bearing_cd;           // OA adjusted heading to _oa_destination in centi-degrees
 };

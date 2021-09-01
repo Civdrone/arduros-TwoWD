@@ -18,7 +18,7 @@
 #include "AR_AttitudeControl.h"
 #include <AP_GPS/AP_GPS.h>
 
-extern const AP_HAL::HAL& hal;
+extern const AP_HAL::HAL &hal;
 
 const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
 
@@ -418,17 +418,55 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("_STR_ANG_I_DT", 15, AR_AttitudeControl, _steer_angle_i_dt, 0.00f),
 
-    AP_GROUPEND
-};
+    // @Param: _STR_ANG_KP
+    // @DisplayName: Steering control angle IMAX value.
+    // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
+    // @Range: 0 1
+    // @Increment: 0.00001
+    // @User: Standard
+    AP_GROUPINFO("_STR_ANG_KP", 16, AR_AttitudeControl, _steer_angle_Kp, 0.00f),
 
-AR_AttitudeControl::AR_AttitudeControl(AP_AHRS &ahrs) :
-    _ahrs(ahrs),
-    _steer_angle_p(AR_ATTCONTROL_STEER_ANG_P),
-    _steer_rate_pid(AR_ATTCONTROL_STEER_RATE_P, AR_ATTCONTROL_STEER_RATE_I, AR_ATTCONTROL_STEER_RATE_D, AR_ATTCONTROL_STEER_RATE_FF, AR_ATTCONTROL_STEER_RATE_IMAX, 0.0f, AR_ATTCONTROL_STEER_RATE_FILT, 0.0f, AR_ATTCONTROL_DT),
-    _throttle_speed_pid(AR_ATTCONTROL_THR_SPEED_P, AR_ATTCONTROL_THR_SPEED_I, AR_ATTCONTROL_THR_SPEED_D, 0.0f, AR_ATTCONTROL_THR_SPEED_IMAX, 0.0f, AR_ATTCONTROL_THR_SPEED_FILT, 0.0f, AR_ATTCONTROL_DT),
-    _pitch_to_throttle_pid(AR_ATTCONTROL_PITCH_THR_P, AR_ATTCONTROL_PITCH_THR_I, AR_ATTCONTROL_PITCH_THR_D, 0.0f, AR_ATTCONTROL_PITCH_THR_IMAX, 0.0f, AR_ATTCONTROL_PITCH_THR_FILT, 0.0f, AR_ATTCONTROL_DT),
-    _sailboat_heel_pid(AR_ATTCONTROL_HEEL_SAIL_P, AR_ATTCONTROL_HEEL_SAIL_I, AR_ATTCONTROL_HEEL_SAIL_D, 0.0f, AR_ATTCONTROL_HEEL_SAIL_IMAX, 0.0f, AR_ATTCONTROL_HEEL_SAIL_FILT, 0.0f, AR_ATTCONTROL_DT)
-    {
+    // @Param: _STR_ANG_E
+    // @DisplayName: Final value of pivot.
+    // @Description: Final value of pivot in degree.
+    // @Range: 0 180
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("_STR_ANG_E", 17, AR_AttitudeControl, _steer_angle_end, 0),
+
+    // @Param: _STR_ANG_I_Kend
+    // @DisplayName: Steering control angle IMAX value.
+    // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
+    // @Range: 0 1
+    // @Increment: 0.00001
+    // @User: Standard
+    AP_GROUPINFO("_ANG_DEADT", 20, AR_AttitudeControl, _steer_angle_deadTime, 100000.00f),
+
+    // @Param: _STR_ANG_I_Kend
+    // @DisplayName: Steering control angle IMAX value.
+    // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
+    // @Range: 0 1
+    // @Increment: 0.00001
+    // @User: Standard
+    AP_GROUPINFO("_ANG_DEG", 21, AR_AttitudeControl, _steer_angle_degree, 0.00f),
+
+    // @Param: _STR_ANG_I_Kend
+    // @DisplayName: Steering control angle IMAX value.
+    // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
+    // @Range: 0 1
+    // @Increment: 0.00001
+    // @User: Standard
+    AP_GROUPINFO("_ANG_FLAG", 22, AR_AttitudeControl, _steer_angle_flag, 0.00f),
+
+    AP_GROUPEND};
+
+AR_AttitudeControl::AR_AttitudeControl(AP_AHRS &ahrs) : _ahrs(ahrs),
+                                                        _steer_angle_p(AR_ATTCONTROL_STEER_ANG_P),
+                                                        _steer_rate_pid(AR_ATTCONTROL_STEER_RATE_P, AR_ATTCONTROL_STEER_RATE_I, AR_ATTCONTROL_STEER_RATE_D, AR_ATTCONTROL_STEER_RATE_FF, AR_ATTCONTROL_STEER_RATE_IMAX, 0.0f, AR_ATTCONTROL_STEER_RATE_FILT, 0.0f, AR_ATTCONTROL_DT),
+                                                        _throttle_speed_pid(AR_ATTCONTROL_THR_SPEED_P, AR_ATTCONTROL_THR_SPEED_I, AR_ATTCONTROL_THR_SPEED_D, 0.0f, AR_ATTCONTROL_THR_SPEED_IMAX, 0.0f, AR_ATTCONTROL_THR_SPEED_FILT, 0.0f, AR_ATTCONTROL_DT),
+                                                        _pitch_to_throttle_pid(AR_ATTCONTROL_PITCH_THR_P, AR_ATTCONTROL_PITCH_THR_I, AR_ATTCONTROL_PITCH_THR_D, 0.0f, AR_ATTCONTROL_PITCH_THR_IMAX, 0.0f, AR_ATTCONTROL_PITCH_THR_FILT, 0.0f, AR_ATTCONTROL_DT),
+                                                        _sailboat_heel_pid(AR_ATTCONTROL_HEEL_SAIL_P, AR_ATTCONTROL_HEEL_SAIL_I, AR_ATTCONTROL_HEEL_SAIL_D, 0.0f, AR_ATTCONTROL_HEEL_SAIL_IMAX, 0.0f, AR_ATTCONTROL_HEEL_SAIL_FILT, 0.0f, AR_ATTCONTROL_DT)
+{
     AP_Param::setup_object_defaults(this, var_info);
 }
 
@@ -442,7 +480,8 @@ float AR_AttitudeControl::get_steering_out_lat_accel(float desired_accel, bool m
 
     // get speed forward
     float speed;
-    if (!get_forward_speed(speed)) {
+    if (!get_forward_speed(speed))
+    {
         // we expect caller will not try to control heading using rate control without a valid speed estimate
         // on failure to get speed we do not attempt to steer
         return 0.0f;
@@ -467,39 +506,79 @@ float AR_AttitudeControl::get_steering_out_heading(float heading_rad, float rate
 // return a desired turn-rate given a desired heading in radians
 float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float rate_max_rads)
 {
-    // Map the values from (-M_PI, M_PI) to (-1 to 1).
-    const float yaw_error = wrap_PI(heading_rad - _ahrs.yaw) / M_PI;
+
+    // Yaw error in degrees
+    const float yaw_error = wrap_PI(heading_rad - _ahrs.yaw) * 180.0f / M_PI;
 
     const uint32_t now = AP_HAL::millis();
-    if ((_steer_pivot_last_ms == 0) || ((now - _steer_pivot_last_ms) > AR_ATTCONTROL_TIMEOUT_MS)) {
-        _pivot_i = 0;
+    if ((_steer_pivot_last_ms == 0) || ((now - _steer_pivot_last_ms) > AR_ATTCONTROL_TIMEOUT_MS))
+    {
+        _Ui = 0;
     }
     _steer_pivot_last_ms = now;
 
-    // Calculate the desired turn rate (in radians) from the angle error (also in radians)
-    float P_out = _steer_angle_p.get_p(yaw_error);
-    _pivot_i += (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
+    // Calculate the desired turn rate (in degrees) from the angle error (also in degrees)
+    float Up = _steer_angle_end + _steer_angle_Kp * fabsf(yaw_error);
+    if (yaw_error < 0)
+    {
+        Up = -Up;
+    }
+
+    if (fabsf(_ahrs.get_yaw_rate_earth()) < ((_steer_angle_degree * M_PI / 180.0f) / _steer_angle_deadTime))
+    {
+
+        _stuck_pivot_now = AP_HAL::millis();
+
+        if (_steer_angle_flag)
+        {
+            // Starting accumulating at the begining and releasing the value after deadtime interval
+            _Ui_aux = (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
+
+            if (_stuck_pivot_now - _stuck_pivot_start >= _steer_angle_deadTime)
+            {
+                _Ui = _Ui_aux;
+            }
+        }
+        else
+        {
+            // Starting accumulating after deadtime interval
+            if (_stuck_pivot_now - _stuck_pivot_start >= _steer_angle_deadTime)
+            {
+                _Ui = (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
+            }
+        }
+    }
+    else
+    {
+        _stuck_pivot_start = AP_HAL::millis();
+    }
+
+    // _pivot_i += (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
 
     // steer_angle_imax needs to be a value between (-1, 1)
-    if(_pivot_i < -_steer_angle_imax){
-        _pivot_i = -_steer_angle_imax;
+    if (_Ui / 180.0f < -_steer_angle_imax)
+    {
+        _Ui = -_steer_angle_imax * 180.0f;
     }
-    else if(_pivot_i > _steer_angle_imax){
-        _pivot_i = _steer_angle_imax;
+    else if (_Ui / 180.0f > _steer_angle_imax)
+    {
+        _Ui = _steer_angle_imax * 180.0f;
     }
 
-    float desired_rate = _pivot_i + P_out;
+    float U = (_Ui + Up) / 180.0f; // Control signal
 
     // rate_max_rads needs to be a value between (-1, 1)
     rate_max_rads = wrap_PI(rate_max_rads) / M_PI;
-    if(desired_rate < -rate_max_rads){
-        desired_rate = -rate_max_rads;
+    if (U < -rate_max_rads)
+    {
+        U = -rate_max_rads;
     }
-    else if(desired_rate > rate_max_rads){
-        desired_rate = rate_max_rads;
+    else if (U > rate_max_rads)
+    {
+        U = rate_max_rads;
     }
 
-    return desired_rate; // value between (-1, 1)
+    return U; // value between (-1, 1)
 }
 
 // return a steering servo output from -1 to +1 given a
@@ -511,7 +590,8 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool motor_l
 
     // if not called recently, reset input filter and desired turn rate to actual turn rate (used for accel limiting)
     const uint32_t now = AP_HAL::millis();
-    if ((_steer_turn_last_ms == 0) || ((now - _steer_turn_last_ms) > AR_ATTCONTROL_TIMEOUT_MS)) {
+    if ((_steer_turn_last_ms == 0) || ((now - _steer_turn_last_ms) > AR_ATTCONTROL_TIMEOUT_MS))
+    {
         _steer_rate_pid.reset_filter();
         _steer_rate_pid.reset_I();
         _desired_turn_rate = _ahrs.get_yaw_rate_earth();
@@ -519,14 +599,16 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool motor_l
     _steer_turn_last_ms = now;
 
     // acceleration limit desired turn rate
-    if (is_positive(_steer_accel_max)) {
+    if (is_positive(_steer_accel_max))
+    {
         const float change_max = radians(_steer_accel_max) * dt;
         desired_rate = constrain_float(desired_rate, _desired_turn_rate - change_max, _desired_turn_rate + change_max);
     }
     _desired_turn_rate = desired_rate;
 
     // rate limit desired turn rate
-    if (is_positive(_steer_rate_max)) {
+    if (is_positive(_steer_rate_max))
+    {
         const float steer_rate_max_rad = radians(_steer_rate_max);
         _desired_turn_rate = constrain_float(_desired_turn_rate, -steer_rate_max_rad, steer_rate_max_rad);
     }
@@ -544,7 +626,8 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool motor_l
 float AR_AttitudeControl::get_desired_turn_rate() const
 {
     // return zero if no recent calls to turn rate controller
-    if ((_steer_turn_last_ms == 0) || ((AP_HAL::millis() - _steer_turn_last_ms) > AR_ATTCONTROL_TIMEOUT_MS)) {
+    if ((_steer_turn_last_ms == 0) || ((AP_HAL::millis() - _steer_turn_last_ms) > AR_ATTCONTROL_TIMEOUT_MS))
+    {
         return 0.0f;
     }
     return _desired_turn_rate;
@@ -554,7 +637,8 @@ float AR_AttitudeControl::get_desired_turn_rate() const
 float AR_AttitudeControl::get_desired_lat_accel() const
 {
     // return zero if no recent calls to lateral acceleration controller
-    if ((_steer_lat_accel_last_ms == 0) || ((AP_HAL::millis() - _steer_lat_accel_last_ms) > AR_ATTCONTROL_TIMEOUT_MS)) {
+    if ((_steer_lat_accel_last_ms == 0) || ((AP_HAL::millis() - _steer_lat_accel_last_ms) > AR_ATTCONTROL_TIMEOUT_MS))
+    {
         return 0.0f;
     }
     return _desired_lat_accel;
@@ -564,7 +648,8 @@ float AR_AttitudeControl::get_desired_lat_accel() const
 bool AR_AttitudeControl::get_lat_accel(float &lat_accel) const
 {
     float speed;
-    if (!get_forward_speed(speed)) {
+    if (!get_forward_speed(speed))
+    {
         return false;
     }
     lat_accel = speed * _ahrs.get_yaw_rate_earth();
@@ -575,10 +660,14 @@ bool AR_AttitudeControl::get_lat_accel(float &lat_accel) const
 float AR_AttitudeControl::get_turn_rate_from_lat_accel(float lat_accel, float speed) const
 {
     // enforce minimum speed to stop oscillations when first starting to move
-    if (fabsf(speed) < AR_ATTCONTROL_STEER_SPEED_MIN) {
-        if (is_negative(speed)) {
+    if (fabsf(speed) < AR_ATTCONTROL_STEER_SPEED_MIN)
+    {
+        if (is_negative(speed))
+        {
             speed = -AR_ATTCONTROL_STEER_SPEED_MIN;
-        } else {
+        }
+        else
+        {
             speed = AR_ATTCONTROL_STEER_SPEED_MIN;
         }
     }
@@ -596,14 +685,16 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
 
     // get speed forward
     float speed;
-    if (!get_forward_speed(speed)) {
+    if (!get_forward_speed(speed))
+    {
         // we expect caller will not try to control heading using rate control without a valid speed estimate
         // on failure to get speed we do not attempt to steer
         return 0.0f;
     }
 
     // if not called recently, reset input filter and desired speed to actual speed (used for accel limiting)
-    if (!speed_control_active()) {
+    if (!speed_control_active())
+    {
         _throttle_speed_pid.reset_filter();
         _throttle_speed_pid.reset_I();
         _desired_speed = speed;
@@ -618,7 +709,8 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
 
     // calculate base throttle (protect against divide by zero)
     float throttle_base = 0.0f;
-    if (is_positive(cruise_speed) && is_positive(cruise_throttle)) {
+    if (is_positive(cruise_speed) && is_positive(cruise_throttle))
+    {
         throttle_base = desired_speed * (cruise_throttle / cruise_speed);
     }
 
@@ -632,12 +724,16 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
     _throttle_limit_high = false;
 
     // protect against reverse output being sent to the motors unless braking has been enabled
-    if (!_brake_enable) {
+    if (!_brake_enable)
+    {
         // if both desired speed and actual speed are positive, do not allow negative values
-        if ((desired_speed >= 0.0f) && (throttle_out <= 0.0f)) {
+        if ((desired_speed >= 0.0f) && (throttle_out <= 0.0f))
+        {
             throttle_out = 0.0f;
             _throttle_limit_low = true;
-        } else if ((desired_speed <= 0.0f) && (throttle_out >= 0.0f)) {
+        }
+        else if ((desired_speed <= 0.0f) && (throttle_out >= 0.0f))
+        {
             throttle_out = 0.0f;
             _throttle_limit_high = true;
         }
@@ -661,12 +757,16 @@ float AR_AttitudeControl::get_throttle_out_stop(bool motor_limit_low, bool motor
 
     // get speed forward
     float speed;
-    if (!get_forward_speed(speed)) {
+    if (!get_forward_speed(speed))
+    {
         // could not get speed so assume stopped
         _stopped = true;
-    } else {
+    }
+    else
+    {
         // if desired speed is zero and vehicle drops below _stop_speed consider it stopped
-        if (is_zero(desired_speed_limited) && fabsf(speed) <= fabsf(_stop_speed)) {
+        if (is_zero(desired_speed_limited) && fabsf(speed) <= fabsf(_stop_speed))
+        {
             _stopped = true;
         }
     }
@@ -675,7 +775,8 @@ float AR_AttitudeControl::get_throttle_out_stop(bool motor_limit_low, bool motor
     stopped = _stopped;
 
     // if stopped return zero
-    if (stopped) {
+    if (stopped)
+    {
         // update last time we thought we were stopped
         _stop_last_ms = now;
         // set last time speed controller was run so accelerations are limited
@@ -699,7 +800,8 @@ float AR_AttitudeControl::get_throttle_out_from_pitch(float desired_pitch, float
 
     // if not called recently, reset input filter
     const uint32_t now = AP_HAL::millis();
-    if ((_balance_last_ms == 0) || ((now - _balance_last_ms) > AR_ATTCONTROL_TIMEOUT_MS)) {
+    if ((_balance_last_ms == 0) || ((now - _balance_last_ms) > AR_ATTCONTROL_TIMEOUT_MS))
+    {
         _pitch_to_throttle_pid.reset_filter();
         _pitch_to_throttle_pid.reset_I();
     }
@@ -721,7 +823,8 @@ float AR_AttitudeControl::get_throttle_out_from_pitch(float desired_pitch, float
 float AR_AttitudeControl::get_desired_pitch() const
 {
     // if not called recently, return 0
-    if ((_balance_last_ms == 0) || ((AP_HAL::millis() - _balance_last_ms) > AR_ATTCONTROL_TIMEOUT_MS)) {
+    if ((_balance_last_ms == 0) || ((AP_HAL::millis() - _balance_last_ms) > AR_ATTCONTROL_TIMEOUT_MS))
+    {
         return 0.0f;
     }
 
@@ -737,7 +840,8 @@ float AR_AttitudeControl::get_sail_out_from_heel(float desired_heel, float dt)
 
     // if not called recently, reset input filter
     const uint32_t now = AP_HAL::millis();
-    if ((_heel_controller_last_ms == 0) || ((now - _heel_controller_last_ms) > AR_ATTCONTROL_TIMEOUT_MS)) {
+    if ((_heel_controller_last_ms == 0) || ((now - _heel_controller_last_ms) > AR_ATTCONTROL_TIMEOUT_MS))
+    {
         _sailboat_heel_pid.reset_filter();
         _sailboat_heel_pid.reset_I();
     }
@@ -753,13 +857,15 @@ float AR_AttitudeControl::get_sail_out_from_heel(float desired_heel, float dt)
 
     // get p, constrain to be zero or negative
     float p = _sailboat_heel_pid.get_p();
-    if (is_positive(p)) {
+    if (is_positive(p))
+    {
         p = 0.0f;
     }
 
     // get i, constrain to be zero or negative
     float i = _sailboat_heel_pid.get_i();
-    if (is_positive(i)) {
+    if (is_positive(i))
+    {
         i = 0.0f;
         _sailboat_heel_pid.reset_I();
     }
@@ -775,29 +881,39 @@ float AR_AttitudeControl::get_sail_out_from_heel(float desired_heel, float dt)
 bool AR_AttitudeControl::get_forward_speed(float &speed) const
 {
     Vector3f velocity;
-    if (!_ahrs.get_velocity_NED(velocity)) {
+    if (!_ahrs.get_velocity_NED(velocity))
+    {
         // use less accurate GPS, assuming entire length is along forward/back axis of vehicle
-        if (AP::gps().status() >= AP_GPS::GPS_OK_FIX_3D) {
-            if (abs(wrap_180_cd(_ahrs.yaw_sensor - AP::gps().ground_course_cd())) <= 9000) {
+        if (AP::gps().status() >= AP_GPS::GPS_OK_FIX_3D)
+        {
+            if (abs(wrap_180_cd(_ahrs.yaw_sensor - AP::gps().ground_course_cd())) <= 9000)
+            {
                 speed = AP::gps().ground_speed();
-            } else {
+            }
+            else
+            {
                 speed = -AP::gps().ground_speed();
             }
             return true;
-        } else {
+        }
+        else
+        {
             return false;
         }
     }
     // calculate forward speed velocity into body frame
-    speed = velocity.x*_ahrs.cos_yaw() + velocity.y*_ahrs.sin_yaw();
+    speed = velocity.x * _ahrs.cos_yaw() + velocity.y * _ahrs.sin_yaw();
     return true;
 }
 
 float AR_AttitudeControl::get_decel_max() const
 {
-    if (is_positive(_throttle_decel_max)) {
+    if (is_positive(_throttle_decel_max))
+    {
         return _throttle_decel_max;
-    } else {
+    }
+    else
+    {
         return _throttle_accel_max;
     }
 }
@@ -806,7 +922,8 @@ float AR_AttitudeControl::get_decel_max() const
 bool AR_AttitudeControl::speed_control_active() const
 {
     // active if there have been recent calls to speed controller
-    if ((_speed_last_ms == 0) || ((AP_HAL::millis() - _speed_last_ms) > AR_ATTCONTROL_TIMEOUT_MS)) {
+    if ((_speed_last_ms == 0) || ((AP_HAL::millis() - _speed_last_ms) > AR_ATTCONTROL_TIMEOUT_MS))
+    {
         return false;
     }
     return true;
@@ -816,7 +933,8 @@ bool AR_AttitudeControl::speed_control_active() const
 float AR_AttitudeControl::get_desired_speed() const
 {
     // return zero if no recent calls to speed controller
-    if (!speed_control_active()) {
+    if (!speed_control_active())
+    {
         return 0.0f;
     }
     return _desired_speed;
@@ -827,7 +945,8 @@ float AR_AttitudeControl::get_desired_speed_accel_limited(float desired_speed, f
 {
     // return input value if no recent calls to speed controller
     // apply no limiting when ATC_ACCEL_MAX is set to zero
-    if (!speed_control_active() || !is_positive(_throttle_accel_max)) {
+    if (!speed_control_active() || !is_positive(_throttle_accel_max))
+    {
         return desired_speed;
     }
 
@@ -838,15 +957,19 @@ float AR_AttitudeControl::get_desired_speed_accel_limited(float desired_speed, f
     float speed_prev = _desired_speed;
 
     // if no recent calls to speed controller limit based on current speed
-    if (!speed_control_active()) {
+    if (!speed_control_active())
+    {
         get_forward_speed(speed_prev);
     }
 
     // acceleration limit desired speed
     float speed_change_max;
-    if (fabsf(desired_speed) < fabsf(_desired_speed) && is_positive(_throttle_decel_max)) {
+    if (fabsf(desired_speed) < fabsf(_desired_speed) && is_positive(_throttle_decel_max))
+    {
         speed_change_max = _throttle_decel_max * dt;
-    } else {
+    }
+    else
+    {
         speed_change_max = _throttle_accel_max * dt;
     }
     return constrain_float(desired_speed, speed_prev - speed_change_max, speed_prev + speed_change_max);
@@ -859,7 +982,8 @@ float AR_AttitudeControl::get_stopping_distance(float speed) const
     const float accel_max = get_accel_max();
 
     // avoid divide by zero
-    if ((accel_max <= 0.0f) || is_zero(speed)) {
+    if ((accel_max <= 0.0f) || is_zero(speed))
+    {
         return 0.0f;
     }
 

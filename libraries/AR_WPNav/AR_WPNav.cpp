@@ -18,15 +18,15 @@
 #include "AR_WPNav.h"
 #include <GCS_MAVLink/GCS.h>
 
-extern const AP_HAL::HAL& hal;
+extern const AP_HAL::HAL &hal;
 
-#define AR_WPNAV_TIMEOUT_MS             100
-#define AR_WPNAV_SPEED_DEFAULT          2.0f
-#define AR_WPNAV_RADIUS_DEFAULT         2.0f
-#define AR_WPNAV_OVERSHOOT_DEFAULT      2.0f
-#define AR_WPNAV_PIVOT_ANGLE_DEFAULT    20
-#define AR_WPNAV_PIVOT_ANGLE_ACCURACY   10     // vehicle will pivot to within this many degrees of destination
-#define AR_WPNAV_PIVOT_RATE_DEFAULT     25
+#define AR_WPNAV_TIMEOUT_MS 100
+#define AR_WPNAV_SPEED_DEFAULT 2.0f
+#define AR_WPNAV_RADIUS_DEFAULT 2.0f
+#define AR_WPNAV_OVERSHOOT_DEFAULT 2.0f
+#define AR_WPNAV_PIVOT_ANGLE_DEFAULT 20
+#define AR_WPNAV_PIVOT_ANGLE_ACCURACY 10 // vehicle will pivot to within this many degrees of destination
+#define AR_WPNAV_PIVOT_RATE_DEFAULT 25
 
 const AP_Param::GroupInfo AR_WPNav::var_info[] = {
 
@@ -93,12 +93,55 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("ANGLE_ACCU", 7, AR_WPNav, _pivot_angle_accuracy, 10),
 
-    AP_GROUPEND
-};
+    // @Param: SLOW_R
+    // @DisplayName: Slow radius
+    // @Description: Vehicle will slow and pivot at this distance
+    // @Units: m
+    // @Range: 0 2
+    // @Increment: 0.1
+    // @User: Standard
+    AP_GROUPINFO("SLOW_R", 8, AR_WPNav, _slow_radius, 0.5),
 
-AR_WPNav::AR_WPNav(AR_AttitudeControl& atc, AP_Navigation& nav_controller) :
-    _atc(atc),
-    _nav_controller(nav_controller)
+    // @Param: SLOW_VEL
+    // @DisplayName: slow velocity
+    // @Description: Vehicle will change the velocity at slow_radius distance from the point
+    // @Units: m/s
+    // @Range: 0 0.3
+    // @Increment: 0.1
+    // @User: Standard
+    AP_GROUPINFO("SLOW_VEL", 9, AR_WPNav, _slow_velocity, 0.1),
+
+    // @Param: REACH_INT
+    // @DisplayName: reach time
+    // @Description: Amount of time that the vehicle need to continue after reaching the waypoint radius
+    // @Units: s
+    // @Range: 0 1
+    // @Increment: 0.1
+    // @User: Standard
+    AP_GROUPINFO("REACH_INT", 10, AR_WPNav, _reach_interval, 0.5),
+
+    // @Param: TIME_FLAG
+    // @DisplayName: time flag
+    // @Description: 1 if is nedeen to navigate a REACH_TIME after one reading of radius wp
+    // @Units: none
+    // @Range: 0 1
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("TIME_FLAG", 11, AR_WPNav, _time_flag, 0),
+
+    // @Param: PIVOT_FLAG
+    // @DisplayName: pivot flag
+    // @Description: 1 if is nedeed to do a pivot when SLOW_RADIUS is reached.
+    // @Units: none
+    // @Range: 0 1
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("PIVOT_FLAG", 12, AR_WPNav, _pivot_flag, 0),
+
+    AP_GROUPEND};
+
+AR_WPNav::AR_WPNav(AR_AttitudeControl &atc, AP_Navigation &nav_controller) : _atc(atc),
+                                                                             _nav_controller(nav_controller)
 {
     AP_Param::setup_object_defaults(this, var_info);
 }
@@ -109,28 +152,31 @@ void AR_WPNav::update(float dt)
     // exit immediately if no current location, origin or destination
     Location current_loc;
     float speed;
-    if (!hal.util->get_soft_armed() || !_orig_and_dest_valid || !AP::ahrs().get_position(current_loc) || !_atc.get_forward_speed(speed)) {
-        _desired_speed_limited = _atc.get_desired_speed_accel_limited(0.0f, dt);
-        _desired_turn_rate_rads = 0.0f;
+    if (!hal.util->get_soft_armed() || !_orig_and_dest_valid || !AP::ahrs().get_position(current_loc) || !_atc.get_forward_speed(speed))
+    {
+        this->stop_vehicle(dt);
         return;
     }
 
     // if no recent calls initialise desired_speed_limited to current speed
-    if (!is_active()) {
+    if (!is_active())
+    {
         _desired_speed_limited = speed;
     }
     _last_update_ms = AP_HAL::millis();
 
     // run path planning around obstacles
     bool stop_vehicle = false;
-   
+
     // true if OA has been recently active;
     bool _oa_was_active = _oa_active;
 
     AP_OAPathPlanner *oa = AP_OAPathPlanner::get_singleton();
-    if (oa != nullptr) {
+    if (oa != nullptr)
+    {
         const AP_OAPathPlanner::OA_RetState oa_retstate = oa->mission_avoidance(current_loc, _origin, _destination, _oa_origin, _oa_destination);
-        switch (oa_retstate) {
+        switch (oa_retstate)
+        {
         case AP_OAPathPlanner::OA_NOT_REQUIRED:
             _oa_active = false;
             break;
@@ -145,7 +191,8 @@ void AR_WPNav::update(float dt)
             break;
         }
     }
-    if (!_oa_active) {
+    if (!_oa_active)
+    {
         _oa_origin = _origin;
         _oa_destination = _destination;
     }
@@ -153,13 +200,16 @@ void AR_WPNav::update(float dt)
     update_distance_and_bearing_to_destination();
 
     // if object avoidance is active check if vehicle should pivot towards destination
-    if (_oa_active) {
+    if (_oa_active)
+    {
         update_pivot_active_flag();
     }
 
     // check if vehicle is in recovering state after switching off OA
-    if (!_oa_active && _oa_was_active) {
-        if (oa->get_options() & AP_OAPathPlanner::OA_OPTION_WP_RESET) {
+    if (!_oa_active && _oa_was_active)
+    {
+        if (oa->get_options() & AP_OAPathPlanner::OA_OPTION_WP_RESET)
+        {
             //reset wp origin to vehicles current location
             _origin = current_loc;
         }
@@ -168,23 +218,58 @@ void AR_WPNav::update(float dt)
     // check if vehicle has reached the destination
     const bool near_wp = _distance_to_destination <= _radius;
 
-    if(near_wp){
-        
-        gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m]", _distance_to_destination);
-        _desired_speed_limited = _atc.get_desired_speed_accel_limited(0.0f, dt);
+    if (_distance_to_destination <= _slow_radius && !_slow_radius_flag && _slow_radius > 0.02)
+    {
+        _slow_radius_flag = true;
+        _desired_speed = _slow_velocity;
+        _oa_origin = _origin = current_loc;
+        if (_pivot_flag)
+        {
+            _pivot_active = true;
+        }
+    }
+
+    _time_now = AP_HAL::millis();
+
+    if (near_wp || _timer_flag)
+    {
+        if (_reach_interval < 1.0f)
+        {
+            gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m]", _distance_to_destination);
+            this->stop_vehicle(dt);
+            this->reset_memebers();
+            _reached_destination = true;
+            return;
+        }
+        _desired_speed_limited = _slow_velocity;
         _desired_lat_accel = 0.0f;
         _desired_turn_rate_rads = 0.0f;
-        // _count_near_wp = 0;
+        _timer_flag = true;
+    }
+    else
+    {
+        _timer_time = AP_HAL::millis();
+    }
+
+    if (_time_now - _timer_time >= _reach_interval && _reach_interval >= 1.0f)
+    {
+        gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m], inteval time = %f", _distance_to_destination, (float)_reach_interval);
+        this->stop_vehicle(dt);
+        this->reset_memebers();
         _reached_destination = true;
         return;
     }
 
+    if (_timer_flag)
+    {
+        return;
+    }
+
     // handle stopping vehicle if avoidance has failed
-    if (stop_vehicle) {
+    if (stop_vehicle)
+    {
         // decelerate to speed to zero and set turn rate to zero
-        _desired_speed_limited = _atc.get_desired_speed_accel_limited(0.0f, dt);
-        _desired_lat_accel = 0.0f;
-        _desired_turn_rate_rads = 0.0f;
+        this->stop_vehicle(dt);
         return;
     }
 
@@ -196,14 +281,18 @@ void AR_WPNav::update(float dt)
 }
 
 // set desired location
-bool AR_WPNav::set_desired_location(const struct Location& destination, float next_leg_bearing_cd)
+bool AR_WPNav::set_desired_location(const struct Location &destination, float next_leg_bearing_cd)
 {
     // set origin to last destination if waypoint controller active
-    if (is_active() && _orig_and_dest_valid && _reached_destination) {
+    if (is_active() && _orig_and_dest_valid && _reached_destination)
+    {
         _origin = _destination;
-    } else {
+    }
+    else
+    {
         // otherwise use reasonable stopping point
-        if (!get_stopping_location(_origin)) {
+        if (!get_stopping_location(_origin))
+        {
             return false;
         }
     }
@@ -213,24 +302,33 @@ bool AR_WPNav::set_desired_location(const struct Location& destination, float ne
     _oa_destination = _destination = destination;
     _orig_and_dest_valid = true;
     _reached_destination = false;
+    // this->reset_memebers();
     update_distance_and_bearing_to_destination();
+
+    gcs().send_text(MAV_SEVERITY_INFO, "set_desired_location(): _distance_to_destination = %f, _wp_bearing_cd = %f", _distance_to_destination, _wp_bearing_cd);
 
     // determine if we should pivot immediately
     update_pivot_active_flag();
 
     // set final desired speed and whether vehicle should pivot
     _desired_speed_final = 0.0f;
-    if (!is_equal(next_leg_bearing_cd, AR_WPNAV_HEADING_UNKNOWN)) {
+    if (!is_equal(next_leg_bearing_cd, AR_WPNAV_HEADING_UNKNOWN))
+    {
         const float curr_leg_bearing_cd = _origin.get_bearing_to(_destination);
         const float turn_angle_cd = wrap_180_cd(next_leg_bearing_cd - curr_leg_bearing_cd);
-        if (fabsf(turn_angle_cd) < 10.0f) {
+        if (fabsf(turn_angle_cd) < 10.0f)
+        {
             // if turning less than 0.1 degrees vehicle can continue at full speed
             // we use 0.1 degrees instead of zero to avoid divide by zero in calcs below
             _desired_speed_final = _desired_speed;
-        } else if (use_pivot_steering_at_next_WP(turn_angle_cd)) {
+        }
+        else if (use_pivot_steering_at_next_WP(turn_angle_cd))
+        {
             // pivoting so we will stop
             _desired_speed_final = 0.0f;
-        } else {
+        }
+        else
+        {
             // calculate maximum speed that keeps overshoot within bounds
             const float radius_m = fabsf(_overshoot / (cosf(radians(turn_angle_cd * 0.01f)) - 1.0f));
             _desired_speed_final = MIN(_desired_speed, safe_sqrt(_turn_max_mss * radius_m));
@@ -246,18 +344,20 @@ bool AR_WPNav::set_desired_location(const struct Location& destination, float ne
 bool AR_WPNav::set_desired_location_to_stopping_location()
 {
     Location stopping_loc;
-    if (!get_stopping_location(stopping_loc)) {
+    if (!get_stopping_location(stopping_loc))
+    {
         return false;
     }
     return set_desired_location(stopping_loc);
 }
 
 // set desired location as offset from the EKF origin, return true on success
-bool AR_WPNav::set_desired_location_NED(const Vector3f& destination, float next_leg_bearing_cd)
+bool AR_WPNav::set_desired_location_NED(const Vector3f &destination, float next_leg_bearing_cd)
 {
     // initialise destination to ekf origin
     Location destination_ned;
-    if (!AP::ahrs().get_origin(destination_ned)) {
+    if (!AP::ahrs().get_origin(destination_ned))
+    {
         return false;
     }
 
@@ -267,10 +367,11 @@ bool AR_WPNav::set_desired_location_NED(const Vector3f& destination, float next_
 }
 
 // calculate vehicle stopping point using current location, velocity and maximum acceleration
-bool AR_WPNav::get_stopping_location(Location& stopping_loc)
+bool AR_WPNav::get_stopping_location(Location &stopping_loc)
 {
     Location current_loc;
-    if (!AP::ahrs().get_position(current_loc)) {
+    if (!AP::ahrs().get_position(current_loc))
+    {
         return false;
     }
 
@@ -279,7 +380,8 @@ bool AR_WPNav::get_stopping_location(Location& stopping_loc)
     const float speed = velocity.length();
 
     // avoid divide by zero
-    if (!is_positive(speed)) {
+    if (!is_positive(speed))
+    {
         stopping_loc = current_loc;
         return true;
     }
@@ -299,12 +401,14 @@ bool AR_WPNav::get_stopping_location(Location& stopping_loc)
 bool AR_WPNav::use_pivot_steering_at_next_WP(float yaw_error_cd) const
 {
     // check cases where we clearly cannot use pivot steering
-    if (!_pivot_possible || _pivot_angle <= _pivot_angle_accuracy) {
+    if (!_pivot_possible || _pivot_angle <= _pivot_angle_accuracy)
+    {
         return false;
     }
 
     // if error is larger than _pivot_angle then use pivot steering at next WP
-    if (fabsf(yaw_error_cd) * 0.01f > _pivot_angle) {
+    if (fabsf(yaw_error_cd) * 0.01f > _pivot_angle)
+    {
         return true;
     }
 
@@ -317,7 +421,8 @@ bool AR_WPNav::use_pivot_steering_at_next_WP(float yaw_error_cd) const
 void AR_WPNav::update_pivot_active_flag()
 {
     // check cases where we clearly cannot use pivot steering
-    if (!_pivot_possible || (_pivot_angle <= _pivot_angle_accuracy)) {
+    if (!_pivot_possible || (_pivot_angle <= _pivot_angle_accuracy))
+    {
         _pivot_active = false;
         return;
     }
@@ -326,13 +431,15 @@ void AR_WPNav::update_pivot_active_flag()
     const float yaw_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;
     const float yaw_error = fabsf(wrap_180_cd(yaw_cd - AP::ahrs().yaw_sensor)) * 0.01f;
     // if error is larger than _pivot_angle start pivot steering
-    if (yaw_error > _pivot_angle) {
+    if (yaw_error > _pivot_angle)
+    {
         _pivot_active = true;
         return;
     }
 
     // if within 10 degrees of the target heading, exit pivot steering
-    if (yaw_error < _pivot_angle_accuracy) {
+    if (yaw_error < _pivot_angle_accuracy)
+    {
         _pivot_active = false;
         return;
     }
@@ -349,7 +456,8 @@ void AR_WPNav::update_distance_and_bearing_to_destination()
 {
     // if no current location leave distance unchanged
     Location current_loc;
-    if (!_orig_and_dest_valid || !AP::ahrs().get_position(current_loc)) {
+    if (!_orig_and_dest_valid || !AP::ahrs().get_position(current_loc))
+    {
         _distance_to_destination = 0.0f;
         _wp_bearing_cd = 0.0f;
 
@@ -362,10 +470,13 @@ void AR_WPNav::update_distance_and_bearing_to_destination()
     _wp_bearing_cd = current_loc.get_bearing_to(_destination);
 
     // update OA adjusted values
-    if (_oa_active) {
+    if (_oa_active)
+    {
         _oa_distance_to_destination = current_loc.get_distance(_oa_destination);
         _oa_wp_bearing_cd = current_loc.get_bearing_to(_oa_destination);
-    } else {
+    }
+    else
+    {
         _oa_distance_to_destination = _distance_to_destination;
         _oa_wp_bearing_cd = _wp_bearing_cd;
     }
@@ -373,19 +484,22 @@ void AR_WPNav::update_distance_and_bearing_to_destination()
 
 // calculate steering output to drive along line from origin to destination waypoint
 // relies on update_distance_and_bearing_to_destination being called first so _wp_bearing_cd has been updated
-void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
+void AR_WPNav::update_steering(const Location &current_loc, float current_speed)
 {
     update_pivot_active_flag();
     // calculate desired turn rate and update desired heading
-    if (_pivot_active) {
+    if (_pivot_active)
+    {
         _cross_track_error = calc_crosstrack_error(current_loc);
-        _desired_heading_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;;
+        _desired_heading_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;
         _desired_lat_accel = 0.0f;
         _desired_turn_rate_rads = _atc.get_turn_rate_from_heading(radians(_desired_heading_cd * 0.01f), radians(_pivot_rate));
 
         // update flag so that it can be cleared
         // update_pivot_active_flag();
-    } else {
+    }
+    else
+    {
         // run L1 controller
         _nav_controller.set_reverse(_reversed);
         _nav_controller.update_waypoint(_reached_destination ? current_loc : _oa_origin, _oa_destination, _radius);
@@ -393,7 +507,8 @@ void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
         // retrieve lateral acceleration, heading back towards line and crosstrack error
         _desired_lat_accel = constrain_float(_nav_controller.lateral_acceleration(), -_turn_max_mss, _turn_max_mss);
         _desired_heading_cd = wrap_360_cd(_nav_controller.nav_bearing_cd());
-        if (_reversed) {
+        if (_reversed)
+        {
             _desired_lat_accel *= -1.0f;
             _desired_heading_cd = wrap_360_cd(_desired_heading_cd + 18000);
         }
@@ -408,7 +523,8 @@ void AR_WPNav::update_steering(const Location& current_loc, float current_speed)
 void AR_WPNav::update_desired_speed(float dt)
 {
     // reduce speed to zero during pivot turns
-    if (_pivot_active) {
+    if (_pivot_active)
+    {
         // decelerate to zero
         _desired_speed_limited = _atc.get_desired_speed_accel_limited(0.0f, dt);
         return;
@@ -433,7 +549,8 @@ void AR_WPNav::update_desired_speed(float dt)
     // calculate radius of circle that touches vehicle's current position and heading and target position and heading
     float radius_m = 999.0f;
     const float radius_calc_denom = fabsf(1.0f - cosf(turn_angle_rad));
-    if (!is_zero(radius_calc_denom)) {
+    if (!is_zero(radius_calc_denom))
+    {
         radius_m = MAX(0.0f, _overshoot + wp_overshoot_adj) / radius_calc_denom;
     }
 
@@ -444,7 +561,8 @@ void AR_WPNav::update_desired_speed(float dt)
     des_speed_lim = constrain_float(des_speed_lim, -overshoot_speed_max, overshoot_speed_max);
 
     // limit speed based on distance to waypoint and max acceleration/deceleration
-    if (is_positive(_oa_distance_to_destination) && is_positive(_atc.get_decel_max())) {
+    if (is_positive(_oa_distance_to_destination) && is_positive(_atc.get_decel_max()))
+    {
         const float dist_speed_max = safe_sqrt(2.0f * _oa_distance_to_destination * _atc.get_decel_max() + sq(_desired_speed_final));
         des_speed_lim = constrain_float(des_speed_lim, -dist_speed_max, dist_speed_max);
     }
@@ -464,7 +582,8 @@ void AR_WPNav::set_turn_params(float turn_max_g, float turn_radius, bool pivot_p
 // desired_speed should always be positive (or zero)
 void AR_WPNav::apply_speed_min(float &desired_speed) const
 {
-    if (!is_positive(_speed_min) || (_speed_min > _speed_max)) {
+    if (!is_positive(_speed_min) || (_speed_min > _speed_max))
+    {
         return;
     }
 
@@ -473,9 +592,10 @@ void AR_WPNav::apply_speed_min(float &desired_speed) const
 }
 
 // calculate the crosstrack error (does not rely on L1 controller)
-float AR_WPNav::calc_crosstrack_error(const Location& current_loc) const
+float AR_WPNav::calc_crosstrack_error(const Location &current_loc) const
 {
-    if (!_orig_and_dest_valid) {
+    if (!_orig_and_dest_valid)
+    {
         return 0.0f;
     }
 
@@ -483,7 +603,8 @@ float AR_WPNav::calc_crosstrack_error(const Location& current_loc) const
     Vector2f dest_from_origin = _oa_origin.get_distance_NE(_oa_destination);
 
     // return distance to origin if length of track is very small
-    if (dest_from_origin.length() < 1.0e-6f) {
+    if (dest_from_origin.length() < 1.0e-6f)
+    {
         return current_loc.get_distance_NE(_oa_destination).length();
     }
 
@@ -495,4 +616,20 @@ float AR_WPNav::calc_crosstrack_error(const Location& current_loc) const
 
     // calculate distance to target track, for reporting
     return veh_from_origin % dest_from_origin;
+}
+
+void AR_WPNav::reset_memebers()
+{
+    _slow_radius_flag = false;
+    _timer_flag = false;
+    _desired_speed = _desired_speed_gcs;
+    gcs().send_text(MAV_SEVERITY_INFO, "reset_memebers(): _desired_speed = %f", _desired_speed);
+}
+
+void AR_WPNav::stop_vehicle(float dt)
+{
+    _desired_speed_limited = _atc.get_desired_speed_accel_limited(0.0f, dt);
+    _desired_lat_accel = 0.0f;
+    _desired_turn_rate_rads = 0.0f;
+    gcs().send_text(MAV_SEVERITY_INFO, "stop_vehicle() _desired_speed_limited = %f, _desired_turn_rate_rads = %f", _desired_speed_limited, _desired_turn_rate_rads);
 }
