@@ -197,6 +197,7 @@ private:
     uint32_t _steer_pivot_last_ms = 0; // system time of last call to steering rate controller
     AP_Float _steer_angle_Kp;
     AP_Float _steer_angle_end;
+    AP_Float _angle_I_rate;
     AP_Float _steer_angle_ratio;
     uint32_t _steer_pivot_stuck_last_ms = 0; // system time of last call to steering rate controller
     uint32_t _stuck_pivot_start = 0;

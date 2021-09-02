@@ -21,12 +21,12 @@
 extern const AP_HAL::HAL &hal;
 
 #define AR_WPNAV_TIMEOUT_MS 100
-#define AR_WPNAV_SPEED_DEFAULT 2.0f
-#define AR_WPNAV_RADIUS_DEFAULT 2.0f
-#define AR_WPNAV_OVERSHOOT_DEFAULT 2.0f
-#define AR_WPNAV_PIVOT_ANGLE_DEFAULT 20
+#define AR_WPNAV_SPEED_DEFAULT 0.8f
+#define AR_WPNAV_RADIUS_DEFAULT 0.07f
+#define AR_WPNAV_OVERSHOOT_DEFAULT 0.001f
+#define AR_WPNAV_PIVOT_ANGLE_DEFAULT 90
 #define AR_WPNAV_PIVOT_ANGLE_ACCURACY 10 // vehicle will pivot to within this many degrees of destination
-#define AR_WPNAV_PIVOT_RATE_DEFAULT 25
+#define AR_WPNAV_PIVOT_RATE_DEFAULT 180
 
 const AP_Param::GroupInfo AR_WPNav::var_info[] = {
 
@@ -91,7 +91,7 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @Range: 0 360
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("ANGLE_ACCU", 7, AR_WPNav, _pivot_angle_accuracy, 10),
+    AP_GROUPINFO("ANGLE_ACCU", 7, AR_WPNav, _pivot_angle_accuracy, 2),
 
     // @Param: SLOW_R
     // @DisplayName: Slow radius
@@ -100,7 +100,7 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @Range: 0 2
     // @Increment: 0.1
     // @User: Standard
-    AP_GROUPINFO("SLOW_R", 8, AR_WPNav, _slow_radius, 0.5),
+    AP_GROUPINFO("SLOW_R", 8, AR_WPNav, _slow_radius, 0.75),
 
     // @Param: SLOW_VEL
     // @DisplayName: slow velocity
@@ -114,20 +114,11 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @Param: REACH_INT
     // @DisplayName: reach time
     // @Description: Amount of time that the vehicle need to continue after reaching the waypoint radius
-    // @Units: s
+    // @Units: ms
     // @Range: 0 1
     // @Increment: 0.1
     // @User: Standard
-    AP_GROUPINFO("REACH_INT", 10, AR_WPNav, _reach_interval, 0.5),
-
-    // @Param: TIME_FLAG
-    // @DisplayName: time flag
-    // @Description: 1 if is nedeen to navigate a REACH_TIME after one reading of radius wp
-    // @Units: none
-    // @Range: 0 1
-    // @Increment: 1
-    // @User: Standard
-    AP_GROUPINFO("TIME_FLAG", 11, AR_WPNav, _time_flag, 0),
+    AP_GROUPINFO("REACH_INT", 10, AR_WPNav, _reach_interval, 1),
 
     // @Param: PIVOT_FLAG
     // @DisplayName: pivot flag
@@ -136,7 +127,7 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @Range: 0 1
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("PIVOT_FLAG", 12, AR_WPNav, _pivot_flag, 0),
+    AP_GROUPINFO("PIVOT_FLAG", 11, AR_WPNav, _pivot_flag, 1),
 
     AP_GROUPEND};
 
@@ -242,28 +233,27 @@ void AR_WPNav::update(float dt)
             _reached_destination = true;
             return;
         }
-        _desired_speed_limited = _slow_velocity;
-        _desired_lat_accel = 0.0f;
-        _desired_turn_rate_rads = 0.0f;
-        _timer_flag = true;
+        else
+        {
+            _desired_speed_limited = _slow_velocity;
+            _desired_lat_accel = 0.0f;
+            _desired_turn_rate_rads = 0.0f;
+            _timer_flag = true;
+
+            if (_time_now - _timer_time >= _reach_interval)
+            {
+                gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m], inteval time = %f", _distance_to_destination, (float)_reach_interval);
+                this->stop_vehicle(dt);
+                this->reset_memebers();
+                _reached_destination = true;
+            }
+        }
+
+        return;
     }
     else
     {
         _timer_time = AP_HAL::millis();
-    }
-
-    if (_time_now - _timer_time >= _reach_interval && _reach_interval >= 1.0f)
-    {
-        gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m], inteval time = %f", _distance_to_destination, (float)_reach_interval);
-        this->stop_vehicle(dt);
-        this->reset_memebers();
-        _reached_destination = true;
-        return;
-    }
-
-    if (_timer_flag)
-    {
-        return;
     }
 
     // handle stopping vehicle if avoidance has failed
@@ -303,7 +293,7 @@ bool AR_WPNav::set_desired_location(const struct Location &destination, float ne
     _oa_destination = _destination = destination;
     _orig_and_dest_valid = true;
     _reached_destination = false;
-    // this->reset_memebers();
+    this->reset_memebers();
     update_distance_and_bearing_to_destination();
 
     gcs().send_text(MAV_SEVERITY_INFO, "set_desired_location(): _distance_to_destination = %f, _wp_bearing_cd = %f", _distance_to_destination, _wp_bearing_cd);
@@ -623,8 +613,7 @@ void AR_WPNav::reset_memebers()
 {
     _slow_radius_flag = false;
     _timer_flag = false;
-    // _desired_speed = _desired_speed_gcs;
-    _desired_speed = 0.6;
+    _desired_speed = _desired_speed_gcs;
     gcs().send_text(MAV_SEVERITY_INFO, "reset_memebers(): _desired_speed = %f", _desired_speed);
 }
 
@@ -633,5 +622,5 @@ void AR_WPNav::stop_vehicle(float dt)
     _desired_speed_limited = _atc.get_desired_speed_accel_limited(0.0f, dt);
     _desired_lat_accel = 0.0f;
     _desired_turn_rate_rads = 0.0f;
-    gcs().send_text(MAV_SEVERITY_INFO, "stop_vehicle() _desired_speed_limited = %f, _desired_turn_rate_rads = %f", _desired_speed_limited, _desired_turn_rate_rads);
+    // gcs().send_text(MAV_SEVERITY_INFO, "stop_vehicle() _desired_speed_limited = %f, _desired_turn_rate_rads = %f", _desired_speed_limited, _desired_turn_rate_rads);
 }

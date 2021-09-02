@@ -23,11 +23,21 @@ public:
     void set_desired_speed(float speed)
     {
         _desired_speed = MAX(speed, 0.0f);
-        _desired_speed_gcs = _desired_speed;
+        if (_desired_speed > 0)
+        {
+            _desired_speed_gcs = _desired_speed;
+        }
     }
 
     // restore desired speed to default from parameter value
-    void set_desired_speed_to_default() { _desired_speed = _speed_max; }
+    void set_desired_speed_to_default()
+    {
+        _desired_speed = _speed_max;
+        if (_desired_speed > 0)
+        {
+            _desired_speed_gcs = _desired_speed;
+        }
+    }
 
     // execute the mission in reverse (i.e. drive backwards to destination)
     bool get_reversed() const { return _reversed; }
@@ -174,7 +184,7 @@ private:
     uint32_t _time_now = 0;
     uint32_t _timer_time = 0;
     bool _timer_flag = false;
-    float _desired_speed_gcs = 0.6; // Desired speed seted from gcs
+    float _desired_speed_gcs; // Desired speed seted from gcs
     // uint16_t _count_near_wp {0};    // counts the number of times the vehicles is inside the waypoint radius consecutively
     // uint8_t _timer {0};
 
