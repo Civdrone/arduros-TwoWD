@@ -229,14 +229,17 @@ void AR_WPNav::update(float dt)
         float current_vel_x;
         float current_distance = 0;
 
+        const float yaw_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;
+        const float yaw_error = fabsf(wrap_180_cd(yaw_cd - AP::ahrs().yaw_sensor)) * 0.01f;
+
         // Initial state (X0,V0)
         if (!_start_accel_calc_flag)
         {
-            _distance = _radius * cos(_wp_bearing_cd * M_PI / 18000);
+            _distance = _radius * cos(yaw_error * M_PI / 180);
             _prev_distance = 0;
             current_vel_x = AP::ahrs().groundspeed_vector().length();
             _start_accel_calc_flag = true;
-            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%s", _distance_to_destination, _distance, _wp_bearing_cd, _prev_accel_x, "before");
+            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%s", _distance_to_destination, _distance, yaw_error, _prev_accel_x, "before");
             _desired_speed_limited = _slow_velocity;
             _desired_lat_accel = 0.0f;
             _desired_turn_rate_rads = 0.0f;
@@ -252,7 +255,7 @@ void AR_WPNav::update(float dt)
             this->stop_vehicle(dt);
             this->reset_memebers();
             _reached_destination = true;
-            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%s", _distance_to_destination, current_distance, _wp_bearing_cd, _prev_accel_x, "after");
+            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%s", _distance_to_destination, current_distance, yaw_error, _prev_accel_x, "after");
             return;
         }
 
