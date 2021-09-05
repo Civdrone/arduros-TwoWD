@@ -252,7 +252,7 @@ void AR_WPNav::update(float dt)
             this->stop_vehicle(dt);
             this->reset_memebers();
             _reached_destination = true;
-            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%s", _distance_to_destination, _distance, _wp_bearing_cd, _prev_accel_x, "after");
+            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%s", _distance_to_destination, current_distance, _wp_bearing_cd, _prev_accel_x, "after");
             return;
         }
 
