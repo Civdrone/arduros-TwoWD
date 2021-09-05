@@ -108,7 +108,7 @@ private:
 
     // calculate steering output to drive along line from origin to destination waypoint
     // relies on update_distance_and_bearing_to_destination being called first
-    void update_steering(const Location &current_loc, float current_speed);
+    void update_steering(const Location &current_loc, float current_speed, float dt);
 
     // calculated desired speed(in m/s) based on yaw error and lateral acceleration and/or distance to a waypoint
     // relies on update_distance_and_bearing_to_destination and update_steering being run so these internal members
@@ -194,4 +194,11 @@ private:
     Location _oa_destination;          // intermediate destination during avoidance
     float _oa_distance_to_destination; // OA (object avoidance) distance from vehicle to _oa_destination in meters
     float _oa_wp_bearing_cd;           // OA adjusted heading to _oa_destination in centi-degrees
+
+    // Acceletometer distance calculation
+    float _prev_accel_x = 0;
+    float _prev_vel_x = 0;
+    float _prev_distance = 0;
+    float _distance = 0;
+    bool _start_accel_calc_flag = false;
 };

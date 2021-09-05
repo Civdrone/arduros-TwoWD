@@ -410,21 +410,13 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("_STR_ANG_IMAX", 14, AR_AttitudeControl, _steer_angle_imax, 1.00f),
 
-    // @Param: _STR_ANG_I_DT
-    // @DisplayName: Steering control angle IMAX value.
-    // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
-    // @Range: 0 1
-    // @Increment: 0.00001
-    // @User: Standard
-    AP_GROUPINFO("_STR_ANG_I_DT", 15, AR_AttitudeControl, _steer_angle_i_dt, 0.005f),
-
     // @Param: _STR_ANG_KP
     // @DisplayName: Steering control angle IMAX value.
     // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
     // @Range: 0 1
     // @Increment: 0.00001
     // @User: Standard
-    AP_GROUPINFO("_STR_ANG_KP", 16, AR_AttitudeControl, _steer_angle_Kp, 0.00f),
+    AP_GROUPINFO("_STR_ANG_KP", 15, AR_AttitudeControl, _steer_angle_Kp, 0.00f),
 
     // @Param: _STR_ANG_E
     // @DisplayName: Final value of pivot.
@@ -432,7 +424,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Range: 0 180
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("_STR_ANG_E", 17, AR_AttitudeControl, _steer_angle_end, 0),
+    AP_GROUPINFO("_STR_ANG_E", 16, AR_AttitudeControl, _steer_angle_end, 0),
 
     // @Param: _ANG_I_R
     // @DisplayName: Final value of pivot.
@@ -440,7 +432,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Range: 0 180
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("_ANG_I_R", 18, AR_AttitudeControl, _angle_I_rate, 0),
+    AP_GROUPINFO("_ANG_I_R", 17, AR_AttitudeControl, _angle_I_rate, 0),
 
     // @Param: _ANG_FLAG
     // @DisplayName: Steering control angle IMAX value.
@@ -448,7 +440,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Range: 0 1
     // @Increment: 0.00001
     // @User: Standard
-    AP_GROUPINFO("_ANG_FLAG", 19, AR_AttitudeControl, _steer_angle_flag, 0),
+    AP_GROUPINFO("_ANG_FLAG", 18, AR_AttitudeControl, _steer_angle_flag, 0),
 
     // // @Param: _STR_ANG_I_Kend
     // // @DisplayName: Steering control angle IMAX value.
@@ -512,7 +504,7 @@ float AR_AttitudeControl::get_steering_out_heading(float heading_rad, float rate
 }
 
 // return a desired turn-rate given a desired heading in radians
-float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float rate_max_rads)
+float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float rate_max_rads, float dt)
 {
 
     // Yaw error in degrees
@@ -532,48 +524,16 @@ float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float ra
         Up = -Up;
     }
 
-    // if (fabsf(_ahrs.get_yaw_rate_earth()) < ((_steer_angle_degree * M_PI / 180.0f) / _steer_angle_deadTime))
-    // // if (fabs(yaw_error) < 20)
-    // {
-
-    //     _stuck_pivot_now = AP_HAL::millis();
-
-    //     if (_steer_angle_flag)
-    //     {
-    //         // Starting accumulating at the begining and releasing the value after deadtime interval
-    //         _Ui_aux = (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
-
-    //         if (_stuck_pivot_now - _stuck_pivot_start >= _steer_angle_deadTime)
-    //         {
-    //             _Ui = _Ui_aux;
-    //         }
-    //     }
-    //     else
-    //     {
-    //         // Starting accumulating after deadtime interval
-    //         if (_stuck_pivot_now - _stuck_pivot_start >= _steer_angle_deadTime)
-    //         {
-    //             _Ui = (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
-    //         }
-    //     }
-    // }
-    // else
-    // {
-    //     _stuck_pivot_start = AP_HAL::millis();
-    // }
-
-    // _pivot_i += (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
-
     if (_steer_angle_flag > 0)
     {
         if (((fabsf(_ahrs.get_yaw_rate_earth()) * 180.0f) / M_PI) < _angle_I_rate)
         {
-            _Ui += (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
+            _Ui += (_steer_angle_i * yaw_error) * dt;
         }
     }
     else
     {
-        _Ui += (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
+        _Ui += (_steer_angle_i * yaw_error) * dt;
     }
 
     // steer_angle_imax needs to be a value between (-1, 1)

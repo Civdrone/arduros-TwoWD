@@ -13,6 +13,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define ALLOW_DOUBLE_MATH_FUNCTIONS
+
 #include <AP_Math/AP_Math.h>
 #include <AP_HAL/AP_HAL.h>
 #include "AR_WPNav.h"
@@ -27,6 +29,7 @@ extern const AP_HAL::HAL &hal;
 #define AR_WPNAV_PIVOT_ANGLE_DEFAULT 90
 #define AR_WPNAV_PIVOT_ANGLE_ACCURACY 10 // vehicle will pivot to within this many degrees of destination
 #define AR_WPNAV_PIVOT_RATE_DEFAULT 180
+#define NAVIGATION_DATA 11
 
 const AP_Param::GroupInfo AR_WPNav::var_info[] = {
 
@@ -221,51 +224,44 @@ void AR_WPNav::update(float dt)
         }
     }
 
-    _time_now = AP_HAL::millis();
-
-    if (near_wp || _timer_flag)
+    if (near_wp)
     {
-        if (_reach_interval < 1.0f)
+        float current_vel_x;
+        float current_distance = 0;
+
+        // Initial state (X0,V0)
+        if (!_start_accel_calc_flag)
         {
-            gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m]", _distance_to_destination);
-            gcs().send_text(MAV_SEVERITY_INFO, "_cross_track_error = %f [m]", _cross_track_error);
-            gcs().send_text(MAV_SEVERITY_INFO, "_wp_bearing_cd = %f [centi-deg]", _wp_bearing_cd);
-            this->stop_vehicle(dt);
-            this->reset_memebers();
-            _reached_destination = true;
-            return;
-        }
-        else
-        {
-            if (!_timer_flag)
-            {
-                gcs().send_text(MAV_SEVERITY_INFO, "BEFORE");
-                gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m], inteval time = %f", _distance_to_destination, (float)_reach_interval);
-                gcs().send_text(MAV_SEVERITY_INFO, "_cross_track_error = %f [m]", _cross_track_error);
-                gcs().send_text(MAV_SEVERITY_INFO, "_wp_bearing_cd = %f [centi-deg]", _wp_bearing_cd);
-            }
+            _distance = _radius * cos(_wp_bearing_cd * M_PI / 18000);
+            _prev_distance = 0;
+            current_vel_x = AP::ahrs().groundspeed_vector().length();
+            _start_accel_calc_flag = true;
+            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%s", _distance_to_destination, _distance, _wp_bearing_cd, _prev_accel_x, "before");
             _desired_speed_limited = _slow_velocity;
             _desired_lat_accel = 0.0f;
             _desired_turn_rate_rads = 0.0f;
-            _timer_flag = true;
-
-            if (_time_now - _timer_time >= _reach_interval)
-            {
-                gcs().send_text(MAV_SEVERITY_INFO, "AFTER");
-                gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m]", _distance_to_destination);
-                gcs().send_text(MAV_SEVERITY_INFO, "_cross_track_error = %f [m]", _cross_track_error);
-                gcs().send_text(MAV_SEVERITY_INFO, "_wp_bearing_cd = %f [centi-deg]", _wp_bearing_cd);
-                this->stop_vehicle(dt);
-                this->reset_memebers();
-                _reached_destination = true;
-            }
+        }
+        else
+        {
+            current_vel_x = _prev_accel_x * dt + _prev_vel_x;
+            current_distance = _prev_distance + _prev_vel_x * dt + (_prev_accel_x * (dt * dt)) / 2;
         }
 
+        if (current_distance >= _distance)
+        {
+            this->stop_vehicle(dt);
+            this->reset_memebers();
+            _reached_destination = true;
+            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%s", _distance_to_destination, _distance, _wp_bearing_cd, _prev_accel_x, "after");
+            return;
+        }
+
+        // Update variables state
+        float current_accel_x = AP::ahrs().get_accel_ef_blended().x;
+        _prev_distance = current_distance;
+        _prev_vel_x = current_vel_x;
+        _prev_accel_x = current_accel_x;
         return;
-    }
-    else
-    {
-        _timer_time = AP_HAL::millis();
     }
 
     // handle stopping vehicle if avoidance has failed
@@ -277,10 +273,13 @@ void AR_WPNav::update(float dt)
     }
 
     // calculate the required turn of the wheels
-    update_steering(current_loc, speed);
+    update_steering(current_loc, speed, dt);
 
     // calculate desired speed
     update_desired_speed(dt);
+
+    float current_accel_x = AP::ahrs().get_accel_ef_blended().x;
+    _prev_accel_x = current_accel_x;
 }
 
 // set desired location
@@ -487,7 +486,7 @@ void AR_WPNav::update_distance_and_bearing_to_destination()
 
 // calculate steering output to drive along line from origin to destination waypoint
 // relies on update_distance_and_bearing_to_destination being called first so _wp_bearing_cd has been updated
-void AR_WPNav::update_steering(const Location &current_loc, float current_speed)
+void AR_WPNav::update_steering(const Location &current_loc, float current_speed, float dt)
 {
     update_pivot_active_flag();
     // calculate desired turn rate and update desired heading
@@ -496,7 +495,7 @@ void AR_WPNav::update_steering(const Location &current_loc, float current_speed)
         _cross_track_error = calc_crosstrack_error(current_loc);
         _desired_heading_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;
         _desired_lat_accel = 0.0f;
-        _desired_turn_rate_rads = _atc.get_turn_rate_from_heading(radians(_desired_heading_cd * 0.01f), radians(_pivot_rate));
+        _desired_turn_rate_rads = _atc.get_turn_rate_from_heading(radians(_desired_heading_cd * 0.01f), radians(_pivot_rate), dt);
 
         // update flag so that it can be cleared
         // update_pivot_active_flag();
@@ -625,6 +624,7 @@ void AR_WPNav::reset_memebers()
 {
     _slow_radius_flag = false;
     _timer_flag = false;
+    _start_accel_calc_flag = false;
     _desired_speed = _desired_speed_gcs;
     // gcs().send_text(MAV_SEVERITY_INFO, "reset_memebers(): _desired_speed = %f", _desired_speed);
 }
