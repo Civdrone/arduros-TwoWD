@@ -228,6 +228,8 @@ void AR_WPNav::update(float dt)
         if (_reach_interval < 1.0f)
         {
             gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m]", _distance_to_destination);
+            gcs().send_text(MAV_SEVERITY_INFO, "_cross_track_error = %f [m]", _cross_track_error);
+            gcs().send_text(MAV_SEVERITY_INFO, "_wp_bearing_cd = %f [centi-deg]", _wp_bearing_cd);
             this->stop_vehicle(dt);
             this->reset_memebers();
             _reached_destination = true;
@@ -235,6 +237,13 @@ void AR_WPNav::update(float dt)
         }
         else
         {
+            if (!_timer_flag)
+            {
+                gcs().send_text(MAV_SEVERITY_INFO, "BEFORE");
+                gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m], inteval time = %f", _distance_to_destination, (float)_reach_interval);
+                gcs().send_text(MAV_SEVERITY_INFO, "_cross_track_error = %f [m]", _cross_track_error);
+                gcs().send_text(MAV_SEVERITY_INFO, "_wp_bearing_cd = %f [centi-deg]", _wp_bearing_cd);
+            }
             _desired_speed_limited = _slow_velocity;
             _desired_lat_accel = 0.0f;
             _desired_turn_rate_rads = 0.0f;
@@ -242,7 +251,10 @@ void AR_WPNav::update(float dt)
 
             if (_time_now - _timer_time >= _reach_interval)
             {
-                gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m], inteval time = %f", _distance_to_destination, (float)_reach_interval);
+                gcs().send_text(MAV_SEVERITY_INFO, "AFTER");
+                gcs().send_text(MAV_SEVERITY_INFO, "Distance to destination = %f [m]", _distance_to_destination);
+                gcs().send_text(MAV_SEVERITY_INFO, "_cross_track_error = %f [m]", _cross_track_error);
+                gcs().send_text(MAV_SEVERITY_INFO, "_wp_bearing_cd = %f [centi-deg]", _wp_bearing_cd);
                 this->stop_vehicle(dt);
                 this->reset_memebers();
                 _reached_destination = true;
@@ -296,7 +308,7 @@ bool AR_WPNav::set_desired_location(const struct Location &destination, float ne
     this->reset_memebers();
     update_distance_and_bearing_to_destination();
 
-    gcs().send_text(MAV_SEVERITY_INFO, "set_desired_location(): _distance_to_destination = %f, _wp_bearing_cd = %f", _distance_to_destination, _wp_bearing_cd);
+    // gcs().send_text(MAV_SEVERITY_INFO, "set_desired_location(): _distance_to_destination = %f, _wp_bearing_cd = %f", _distance_to_destination, _wp_bearing_cd);
 
     // determine if we should pivot immediately
     update_pivot_active_flag();
@@ -614,7 +626,7 @@ void AR_WPNav::reset_memebers()
     _slow_radius_flag = false;
     _timer_flag = false;
     _desired_speed = _desired_speed_gcs;
-    gcs().send_text(MAV_SEVERITY_INFO, "reset_memebers(): _desired_speed = %f", _desired_speed);
+    // gcs().send_text(MAV_SEVERITY_INFO, "reset_memebers(): _desired_speed = %f", _desired_speed);
 }
 
 void AR_WPNav::stop_vehicle(float dt)

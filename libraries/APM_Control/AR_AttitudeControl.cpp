@@ -568,12 +568,12 @@ float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float ra
     {
         if (((fabsf(_ahrs.get_yaw_rate_earth()) * 180.0f) / M_PI) < _angle_I_rate)
         {
-            _Ui = (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
+            _Ui += (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
         }
     }
     else
     {
-        _Ui = (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
+        _Ui += (_steer_angle_i * yaw_error) * _steer_angle_i_dt;
     }
 
     // steer_angle_imax needs to be a value between (-1, 1)
