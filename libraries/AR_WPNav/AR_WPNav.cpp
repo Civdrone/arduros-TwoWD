@@ -224,46 +224,79 @@ void AR_WPNav::update(float dt)
         }
     }
 
+    // if (near_wp)
+    // {
+    //     float current_vel_x;
+    //     float current_distance = 0;
+
+    //     const float yaw_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;
+    //     const float yaw_error = fabsf(wrap_180_cd(yaw_cd - AP::ahrs().yaw_sensor)) * 0.01f;
+
+    //     // Initial state (X0,V0)
+    //     if (!_start_accel_calc_flag)
+    //     {
+    //         _distance = _radius * cos(yaw_error * M_PI / 180);
+    //         _prev_distance = 0;
+    //         current_vel_x = AP::ahrs().groundspeed_vector().length();
+    //         _accel_bias = _prev_accel_x;
+    //         gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%f,%f,%s", _distance_to_destination, _distance, yaw_error, _prev_accel_x, current_vel_x, dt, "before");
+    //         _desired_speed_limited = _slow_velocity;
+    //         _desired_lat_accel = 0.0f;
+    //         _desired_turn_rate_rads = 0.0f;
+    //         _start_accel_calc_flag = true;
+    //     }
+    //     else
+    //     {
+    //         current_vel_x = (_prev_accel_x - _accel_bias) * dt + _prev_vel_x;
+    //         current_distance = _prev_distance + _prev_vel_x * dt + ((_prev_accel_x - _accel_bias) * (dt * dt)) / 2;
+    //     }
+
+    //     gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%f,%s", _distance_to_destination, current_distance, yaw_error, _prev_accel_x, AP::ahrs().groundspeed_vector().length(), "during");
+
+    //     if (current_distance >= _distance)
+    //     {
+    //         this->stop_vehicle(dt);
+    //         this->reset_memebers();
+    //         _reached_destination = true;
+    //         gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%f,%s", _distance_to_destination, current_distance, yaw_error, _prev_accel_x, AP::ahrs().groundspeed_vector().length(), "after");
+    //         return;
+    //     }
+
+    //     // Update variables state
+    //     float current_accel_x = AP::ahrs().get_accel_ef_blended().x;
+    //     _prev_distance = current_distance;
+    //     _prev_vel_x = current_vel_x;
+    //     _prev_accel_x = current_accel_x;
+    //     return;
+    // }
+
     if (near_wp)
     {
-        float current_vel_x;
-        float current_distance = 0;
 
         const float yaw_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;
         const float yaw_error = fabsf(wrap_180_cd(yaw_cd - AP::ahrs().yaw_sensor)) * 0.01f;
 
-        // Initial state (X0,V0)
-        if (!_start_accel_calc_flag)
+        if (!_distance_flag)
         {
-            _distance = _radius * cos(yaw_error * M_PI / 180);
-            _prev_distance = 0;
-            current_vel_x = AP::ahrs().groundspeed_vector().length();
-            _start_accel_calc_flag = true;
-            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%s", _distance_to_destination, _distance, yaw_error, _prev_accel_x, "before");
+            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "before");
             _desired_speed_limited = _slow_velocity;
             _desired_lat_accel = 0.0f;
             _desired_turn_rate_rads = 0.0f;
-        }
-        else
-        {
-            current_vel_x = _prev_accel_x * dt + _prev_vel_x;
-            current_distance = _prev_distance + _prev_vel_x * dt + (_prev_accel_x * (dt * dt)) / 2;
+            _distance_flag = true;
         }
 
-        if (current_distance >= _distance)
+        gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "during");
+
+        if (_distance_to_destination > _prev_distance)
         {
             this->stop_vehicle(dt);
             this->reset_memebers();
             _reached_destination = true;
-            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%s", _distance_to_destination, current_distance, yaw_error, _prev_accel_x, "after");
+            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "after");
             return;
         }
 
-        // Update variables state
-        float current_accel_x = AP::ahrs().get_accel_ef_blended().x;
-        _prev_distance = current_distance;
-        _prev_vel_x = current_vel_x;
-        _prev_accel_x = current_accel_x;
+        _prev_distance = _distance_to_destination;
         return;
     }
 
@@ -281,8 +314,10 @@ void AR_WPNav::update(float dt)
     // calculate desired speed
     update_desired_speed(dt);
 
-    float current_accel_x = AP::ahrs().get_accel_ef_blended().x;
-    _prev_accel_x = current_accel_x;
+    _prev_distance = _distance_to_destination;
+
+    // float current_accel_x = AP::ahrs().get_accel_ef_blended().x;
+    // _prev_accel_x = current_accel_x;
 }
 
 // set desired location
@@ -627,7 +662,7 @@ void AR_WPNav::reset_memebers()
 {
     _slow_radius_flag = false;
     _timer_flag = false;
-    _start_accel_calc_flag = false;
+    _distance_flag = false;
     _desired_speed = _desired_speed_gcs;
     // gcs().send_text(MAV_SEVERITY_INFO, "reset_memebers(): _desired_speed = %f", _desired_speed);
 }

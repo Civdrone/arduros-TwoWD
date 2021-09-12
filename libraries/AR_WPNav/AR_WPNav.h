@@ -200,5 +200,6 @@ private:
     float _prev_vel_x = 0;
     float _prev_distance = 0;
     float _distance = 0;
-    bool _start_accel_calc_flag = false;
+    float _accel_bias = 0;
+    bool _distance_flag = false;
 };

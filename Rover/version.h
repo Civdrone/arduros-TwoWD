@@ -6,7 +6,7 @@
 
 #include "ap_version.h"
 
-#define THISFIRMWARE "ArduRover V4.1.0-dev REACH LOGIC v1.2.4_beta"
+#define THISFIRMWARE "ArduRover V4.1.0-dev REACH LOGIC v1.2.5_beta"
 
 // the following line is parsed by the autotest scripts
 #define FIRMWARE_VERSION 4, 1, 0, FIRMWARE_VERSION_TYPE_DEV
