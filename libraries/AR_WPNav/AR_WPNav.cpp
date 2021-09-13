@@ -649,7 +649,7 @@ void AR_WPNav::reset_memebers()
     _timer_flag = false;
     _distance_flag = false;
     _desired_speed = _desired_speed_gcs;
-    _dt_count = 0;
+    _dt_count = 1;
     _dt_times = 0;
     // gcs().send_text(MAV_SEVERITY_INFO, "reset_memebers(): _desired_speed = %f", _desired_speed);
 }

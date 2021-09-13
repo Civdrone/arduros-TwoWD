@@ -206,7 +206,7 @@ private:
     float _dt_rate = 200 / 8;
     AP_Int16 _gps_rate;
     int _dt_times = 0;
-    int _dt_count = 0;
+    int _dt_count = 1;
     float _prev_distance = 0;
     AP_Float _stop_threshold;
     Location _prev_location;
