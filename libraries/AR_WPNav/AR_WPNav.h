@@ -198,8 +198,16 @@ private:
     // Acceletometer distance calculation
     float _prev_accel_x = 0;
     float _prev_vel_x = 0;
-    float _prev_distance = 0;
     float _distance = 0;
     float _accel_bias = 0;
     bool _distance_flag = false;
+
+    // Stop condition variables
+    float _dt_rate = 200 / 8;
+    AP_Int16 _gps_rate;
+    int _dt_times = 0;
+    int _dt_count = 0;
+    float _prev_distance = 0;
+    AP_Float _stop_threshold;
+    Location _prev_location;
 };

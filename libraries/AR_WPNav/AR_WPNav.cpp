@@ -114,23 +114,23 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("SLOW_VEL", 9, AR_WPNav, _slow_velocity, 0.1),
 
-    // @Param: REACH_INT
-    // @DisplayName: reach time
-    // @Description: Amount of time that the vehicle need to continue after reaching the waypoint radius
+    // @Param: GPS_RATE
+    // @DisplayName: gps rate
+    // @Description: gps reading rate in ms
     // @Units: ms
-    // @Range: 0 1
-    // @Increment: 0.1
-    // @User: Standard
-    AP_GROUPINFO("REACH_INT", 10, AR_WPNav, _reach_interval, 1),
-
-    // @Param: PIVOT_FLAG
-    // @DisplayName: pivot flag
-    // @Description: 1 if is nedeed to do a pivot when SLOW_RADIUS is reached.
-    // @Units: none
-    // @Range: 0 1
+    // @Range: 0 200
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("PIVOT_FLAG", 11, AR_WPNav, _pivot_flag, 1),
+    AP_GROUPINFO("GPS_RATE", 10, AR_WPNav, _gps_rate, 125),
+
+    // @Param: STOP_TH
+    // @DisplayName: stop threshold
+    // @Description: stop threshold distance in mm
+    // @Units: mm
+    // @Range: 0 50
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("STOP_TH", 11, AR_WPNav, _stop_threshold, 0),
 
     AP_GROUPEND};
 
@@ -213,62 +213,13 @@ void AR_WPNav::update(float dt)
     // check if vehicle has reached the destination
     const bool near_wp = _distance_to_destination <= _radius;
 
-    if (_distance_to_destination <= _slow_radius && !_slow_radius_flag && _slow_radius > 0.02)
+    if (_distance_to_destination <= _slow_radius && !_slow_radius_flag)
     {
         _slow_radius_flag = true;
         _desired_speed = _slow_velocity;
         _oa_origin = _origin = current_loc;
-        if (_pivot_flag)
-        {
-            _pivot_active = true;
-        }
+        _pivot_active = true;
     }
-
-    // if (near_wp)
-    // {
-    //     float current_vel_x;
-    //     float current_distance = 0;
-
-    //     const float yaw_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;
-    //     const float yaw_error = fabsf(wrap_180_cd(yaw_cd - AP::ahrs().yaw_sensor)) * 0.01f;
-
-    //     // Initial state (X0,V0)
-    //     if (!_start_accel_calc_flag)
-    //     {
-    //         _distance = _radius * cos(yaw_error * M_PI / 180);
-    //         _prev_distance = 0;
-    //         current_vel_x = AP::ahrs().groundspeed_vector().length();
-    //         _accel_bias = _prev_accel_x;
-    //         gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%f,%f,%s", _distance_to_destination, _distance, yaw_error, _prev_accel_x, current_vel_x, dt, "before");
-    //         _desired_speed_limited = _slow_velocity;
-    //         _desired_lat_accel = 0.0f;
-    //         _desired_turn_rate_rads = 0.0f;
-    //         _start_accel_calc_flag = true;
-    //     }
-    //     else
-    //     {
-    //         current_vel_x = (_prev_accel_x - _accel_bias) * dt + _prev_vel_x;
-    //         current_distance = _prev_distance + _prev_vel_x * dt + ((_prev_accel_x - _accel_bias) * (dt * dt)) / 2;
-    //     }
-
-    //     gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%f,%s", _distance_to_destination, current_distance, yaw_error, _prev_accel_x, AP::ahrs().groundspeed_vector().length(), "during");
-
-    //     if (current_distance >= _distance)
-    //     {
-    //         this->stop_vehicle(dt);
-    //         this->reset_memebers();
-    //         _reached_destination = true;
-    //         gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%f,%s", _distance_to_destination, current_distance, yaw_error, _prev_accel_x, AP::ahrs().groundspeed_vector().length(), "after");
-    //         return;
-    //     }
-
-    //     // Update variables state
-    //     float current_accel_x = AP::ahrs().get_accel_ef_blended().x;
-    //     _prev_distance = current_distance;
-    //     _prev_vel_x = current_vel_x;
-    //     _prev_accel_x = current_accel_x;
-    //     return;
-    // }
 
     if (near_wp)
     {
@@ -283,17 +234,54 @@ void AR_WPNav::update(float dt)
             _desired_lat_accel = 0.0f;
             _desired_turn_rate_rads = 0.0f;
             _distance_flag = true;
+            if (!AP::ahrs().get_position(_prev_location))
+            {
+                gcs().send_text(MAV_SEVERITY_INFO, "Can't read the prev location");
+            }
         }
 
         gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "during");
 
-        if (_distance_to_destination > _prev_distance)
+        if (_dt_times > 0)
         {
-            this->stop_vehicle(dt);
-            this->reset_memebers();
-            _reached_destination = true;
-            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "after");
+            if (_dt_count == _dt_times)
+            {
+                this->stop_vehicle(dt);
+                this->reset_memebers();
+                _reached_destination = true;
+                Location stop_loc;
+                if (!AP::ahrs().get_position(stop_loc))
+                {
+                    gcs().send_text(MAV_SEVERITY_INFO, "Can't read the stop location");
+                }
+                float distance_traveled = _prev_location.get_distance(stop_loc);
+                gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), distance_traveled, "after");
+                return;
+            }
+            _dt_count++;
             return;
+        }
+
+        // If true it means a new gps reading
+        if (_prev_distance > _distance_to_destination)
+        {
+
+            float aux_distance = _distance_to_destination * cos((yaw_error * M_PI) / 180);
+
+            if (aux_distance < (AP::ahrs().groundspeed_vector().length() * (_gps_rate / 1000) + _stop_threshold))
+            {
+                float time_to_destination = aux_distance / AP::ahrs().groundspeed_vector().length();
+                _dt_times = time_to_destination / dt;
+                if (_dt_times < 1)
+                {
+                    _dt_times = 1;
+                }
+                else if (_dt_times > (_gps_rate / dt))
+                {
+                    _dt_times = _gps_rate / dt;
+                }
+                gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%d,%f,%s", aux_distance, _dt_times, AP::ahrs().groundspeed_vector().length(), "stop");
+            }
         }
 
         _prev_distance = _distance_to_destination;
@@ -315,9 +303,6 @@ void AR_WPNav::update(float dt)
     update_desired_speed(dt);
 
     _prev_distance = _distance_to_destination;
-
-    // float current_accel_x = AP::ahrs().get_accel_ef_blended().x;
-    // _prev_accel_x = current_accel_x;
 }
 
 // set desired location
@@ -664,6 +649,8 @@ void AR_WPNav::reset_memebers()
     _timer_flag = false;
     _distance_flag = false;
     _desired_speed = _desired_speed_gcs;
+    _dt_count = 0;
+    _dt_times = 0;
     // gcs().send_text(MAV_SEVERITY_INFO, "reset_memebers(): _desired_speed = %f", _desired_speed);
 }
 
