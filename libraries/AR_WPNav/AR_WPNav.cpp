@@ -121,7 +121,7 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @Range: 0 200
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("GPS_RATE", 10, AR_WPNav, _gps_rate, 125),
+    AP_GROUPINFO("GPS_RATE", 10, AR_WPNav, _gps_rate, 0.125),
 
     // @Param: STOP_TH
     // @DisplayName: stop threshold
@@ -240,7 +240,7 @@ void AR_WPNav::update(float dt)
             }
         }
 
-        gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "during");
+        // gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "during");
 
         if (_dt_times > 0)
         {
@@ -263,12 +263,12 @@ void AR_WPNav::update(float dt)
         }
 
         // If true it means a new gps reading
-        if (_prev_distance > _distance_to_destination)
+        if (_prev_distance > _distance_to_destination || _prev_distance < _distance_to_destination)
         {
-
+            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "during");
             float aux_distance = _distance_to_destination * cos((yaw_error * M_PI) / 180);
 
-            if (aux_distance < (AP::ahrs().groundspeed_vector().length() * (_gps_rate / 1000) + _stop_threshold))
+            if (aux_distance < (AP::ahrs().groundspeed_vector().length() * (_gps_rate) + _stop_threshold))
             {
                 float time_to_destination = aux_distance / AP::ahrs().groundspeed_vector().length();
                 _dt_times = time_to_destination / dt;
@@ -276,7 +276,7 @@ void AR_WPNav::update(float dt)
                 {
                     _dt_times = 1;
                 }
-                else if (_dt_times > (_gps_rate / dt))
+                else if (_dt_times > _gps_rate / dt)
                 {
                     _dt_times = _gps_rate / dt;
                 }
