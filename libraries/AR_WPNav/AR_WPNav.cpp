@@ -87,23 +87,23 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("SPEED_MIN", 6, AR_WPNav, _speed_min, 0),
 
-    // @Param: ANGLE_ACCU
+    // @Param: MIN_ANGLE
     // @DisplayName: pivot angle accuracy
     // @Description: Vehicle will pivot until reachs this angle.
     // @Units: deg/s
     // @Range: 0 360
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("ANGLE_ACCU", 7, AR_WPNav, _pivot_angle_accuracy, 2),
+    AP_GROUPINFO("MIN_ANGLE", 7, AR_WPNav, _min_angle, 2),
 
-    // @Param: SLOW_R
+    // @Param: OUTER_R
     // @DisplayName: Slow radius
     // @Description: Vehicle will slow and pivot at this distance
     // @Units: m
     // @Range: 0 2
     // @Increment: 0.1
     // @User: Standard
-    AP_GROUPINFO("SLOW_R", 8, AR_WPNav, _slow_radius, 0.75),
+    AP_GROUPINFO("OUTER_R", 8, AR_WPNav, _inner_radius, 0.75),
 
     // @Param: SLOW_VEL
     // @DisplayName: slow velocity
@@ -112,7 +112,7 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @Range: 0 0.3
     // @Increment: 0.1
     // @User: Standard
-    AP_GROUPINFO("SLOW_VEL", 9, AR_WPNav, _slow_velocity, 0.1),
+    AP_GROUPINFO("SPEED_SLOW", 9, AR_WPNav, _speed_slow, 0.1),
 
     // @Param: GPS_RATE
     // @DisplayName: gps rate
@@ -130,7 +130,16 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @Range: 0 50
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("STOP_TH", 11, AR_WPNav, _stop_threshold, 0),
+    AP_GROUPINFO("INNER_TH", 11, AR_WPNav, _inner_threshold, 0),
+
+    // @Param: DEBUG_MSG
+    // @DisplayName: debug messages
+    // @Description: turn off/on debug messages
+    // @Units: none
+    // @Range: 0 1
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("DEBUG_MSG", 12, AR_WPNav, _debug_messages, 0),
 
     AP_GROUPEND};
 
@@ -213,10 +222,10 @@ void AR_WPNav::update(float dt)
     // check if vehicle has reached the destination
     const bool near_wp = _distance_to_destination <= _radius;
 
-    if (_distance_to_destination <= _slow_radius && !_slow_radius_flag)
+    if (_distance_to_destination <= _inner_radius && !_inner_radius_flag)
     {
-        _slow_radius_flag = true;
-        _desired_speed = _slow_velocity;
+        _inner_radius_flag = true;
+        _desired_speed = _speed_slow;
         _oa_origin = _origin = current_loc;
         _pivot_active = true;
     }
@@ -230,7 +239,7 @@ void AR_WPNav::update(float dt)
         if (!_distance_flag)
         {
             gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "before");
-            _desired_speed_limited = _slow_velocity;
+            _desired_speed_limited = _speed_slow;
             _desired_lat_accel = 0.0f;
             _desired_turn_rate_rads = 0.0f;
             _distance_flag = true;
@@ -239,8 +248,6 @@ void AR_WPNav::update(float dt)
                 gcs().send_text(MAV_SEVERITY_INFO, "Can't read the prev location");
             }
         }
-
-        // gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "during");
 
         if (_dt_times > 0)
         {
@@ -265,10 +272,14 @@ void AR_WPNav::update(float dt)
         // If true it means a new gps reading
         if (_prev_distance > _distance_to_destination || _prev_distance < _distance_to_destination)
         {
-            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "during");
+            if (_debug_messages > 0)
+            {
+                gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%f,%f,%f,%s", _distance_to_destination, yaw_error, AP::ahrs().groundspeed_vector().length(), "during");
+            }
+
             float aux_distance = _distance_to_destination * cos((yaw_error * M_PI) / 180);
 
-            if (aux_distance < (AP::ahrs().groundspeed_vector().length() * (_gps_rate) + _stop_threshold))
+            if (aux_distance < (AP::ahrs().groundspeed_vector().length() * (_gps_rate) + _inner_threshold))
             {
                 float time_to_destination = aux_distance / AP::ahrs().groundspeed_vector().length();
                 _dt_times = time_to_destination / dt;
@@ -426,7 +437,7 @@ bool AR_WPNav::get_stopping_location(Location &stopping_loc)
 bool AR_WPNav::use_pivot_steering_at_next_WP(float yaw_error_cd) const
 {
     // check cases where we clearly cannot use pivot steering
-    if (!_pivot_possible || _pivot_angle <= _pivot_angle_accuracy)
+    if (!_pivot_possible || _pivot_angle <= _min_angle)
     {
         return false;
     }
@@ -446,7 +457,7 @@ bool AR_WPNav::use_pivot_steering_at_next_WP(float yaw_error_cd) const
 void AR_WPNav::update_pivot_active_flag()
 {
     // check cases where we clearly cannot use pivot steering
-    if (!_pivot_possible || (_pivot_angle <= _pivot_angle_accuracy))
+    if (!_pivot_possible || (_pivot_angle <= _min_angle))
     {
         _pivot_active = false;
         return;
@@ -463,7 +474,7 @@ void AR_WPNav::update_pivot_active_flag()
     }
 
     // if within 10 degrees of the target heading, exit pivot steering
-    if (yaw_error < _pivot_angle_accuracy)
+    if (yaw_error < _min_angle)
     {
         _pivot_active = false;
         return;
@@ -645,7 +656,7 @@ float AR_WPNav::calc_crosstrack_error(const Location &current_loc) const
 
 void AR_WPNav::reset_memebers()
 {
-    _slow_radius_flag = false;
+    _inner_radius_flag = false;
     _timer_flag = false;
     _distance_flag = false;
     _desired_speed = _desired_speed_gcs;

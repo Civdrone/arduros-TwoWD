@@ -190,21 +190,12 @@ private:
     uint32_t _heel_controller_last_ms = 0;
 
     // PID pivot
-    float _last_yaw = 0;
-    AP_Float _steer_angle_i;           // ki
-    AP_Float _steer_angle_imax;        // i_max
-    AP_Float _steer_angle_i_dt;        // i_dt
+    AP_Float _pivot_ki;                // ki
+    AP_Float _pivot_imax;              // i_max
     uint32_t _steer_pivot_last_ms = 0; // system time of last call to steering rate controller
-    AP_Float _steer_angle_Kp;
-    AP_Float _steer_angle_end;
-    AP_Float _angle_I_rate;
-    AP_Float _steer_angle_ratio;
-    uint32_t _steer_pivot_stuck_last_ms = 0; // system time of last call to steering rate controller
-    uint32_t _stuck_pivot_start = 0;
-    uint32_t _stuck_pivot_now = 0;
-    AP_Float _steer_angle_deadTime;
-    AP_Float _steer_angle_degree;
-    AP_Int8 _steer_angle_flag;
+    AP_Float _pivot_kp;
+    AP_Float _pivot_bias;
+
     float _Ui_aux = 0;
     float _Ui = 0;
 };

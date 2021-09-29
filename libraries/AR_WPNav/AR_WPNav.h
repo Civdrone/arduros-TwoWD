@@ -137,18 +137,15 @@ private:
     void stop_vehicle(float dt);
 
     // parameters
-    AP_Float _speed_max;            // target speed between waypoints in m/s
-    AP_Float _speed_min;            // target speed minimum in m/s.  Vehicle will not slow below this speed for corners
-    AP_Float _radius;               // distance in meters from a waypoint when we consider the waypoint has been reached
-    AP_Float _overshoot;            // maximum horizontal overshoot in meters
-    AP_Int16 _pivot_angle;          // angle error that leads to pivot turn
-    AP_Int16 _pivot_rate;           // desired turn rate during pivot turns in deg/sec
-    AP_Int16 _pivot_angle_accuracy; // angle error that stops pivot turn
-    AP_Float _slow_radius;          // Vehicle will slow and pivot at this distance
-    AP_Float _slow_velocity;        // Vehicle will change the velocity at slow_radius distance from the point
-    AP_Float _reach_interval;       // Amount of time that the vehicle need to continue after reaching the waypoint radius
-    AP_Int16 _time_flag;            // angle error that stops pivot turn
-    AP_Int16 _pivot_flag;           // angle error that stops pivot turn
+    AP_Float _speed_max;    // target speed between waypoints in m/s
+    AP_Float _speed_min;    // target speed minimum in m/s.  Vehicle will not slow below this speed for corners
+    AP_Float _radius;       // distance in meters from a waypoint when we consider the waypoint has been reached
+    AP_Float _overshoot;    // maximum horizontal overshoot in meters
+    AP_Int16 _pivot_angle;  // angle error that leads to pivot turn
+    AP_Int16 _pivot_rate;   // desired turn rate during pivot turns in deg/sec
+    AP_Int16 _min_angle;    // angle error that stops pivot turn
+    AP_Float _inner_radius; // Vehicle will slow and pivot at this distance
+    AP_Float _speed_slow;   // Vehicle will change the velocity at slow_radius distance from the point
 
     // references
     AR_AttitudeControl &_atc;       // rover attitude control library
@@ -180,13 +177,11 @@ private:
     // variables for reporting
     float _distance_to_destination; // distance from vehicle to final destination in meters
     bool _reached_destination;      // true once the vehicle has reached the destination
-    bool _slow_radius_flag;
+    bool _inner_radius_flag;
     uint32_t _time_now = 0;
     uint32_t _timer_time = 0;
     bool _timer_flag = false;
     float _desired_speed_gcs; // Desired speed seted from gcs
-    // uint16_t _count_near_wp {0};    // counts the number of times the vehicles is inside the waypoint radius consecutively
-    // uint8_t _timer {0};
 
     // object avoidance variables
     bool _oa_active;                   // true if we should use alternative destination to avoid obstacles
@@ -203,11 +198,13 @@ private:
     bool _distance_flag = false;
 
     // Stop condition variables
-    float _dt_rate = 200 / 8;
     AP_Float _gps_rate;
     int _dt_times = 0;
     int _dt_count = 1;
     float _prev_distance = 0;
-    AP_Float _stop_threshold;
+    AP_Float _inner_threshold;
     Location _prev_location;
+
+    // Debug variables
+    AP_Int8 _debug_messages;
 };

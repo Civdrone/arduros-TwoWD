@@ -394,69 +394,37 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
 
     AP_SUBGROUPINFO(_sailboat_heel_pid, "_SAIL_", 12, AR_AttitudeControl, AC_PID),
 
-    // @Param: _STR_ANG_I
+    // @Param: _PIVOT_KI
     // @DisplayName: Steering control angle I gain
     // @Description: Steering control angle I gain. Converts the error between the desired heading/yaw (in radians) and actual heading/yaw to a desired turn rate (in rad/sec)
     // @Range: 0 10.000
     // @Increment: 0.1
     // @User: Standard
-    AP_GROUPINFO("_STR_ANG_I", 13, AR_AttitudeControl, _steer_angle_i, 0.00f),
+    AP_GROUPINFO("_PIVOT_KI", 13, AR_AttitudeControl, _pivot_ki, 0.00f),
 
-    // @Param: _STR_ANG_IMAX
+    // @Param: _PIVOT_IMAX
     // @DisplayName: Steering control angle IMAX value.
     // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
     // @Range: 0 1
     // @Increment: 0.01
     // @User: Standard
-    AP_GROUPINFO("_STR_ANG_IMAX", 14, AR_AttitudeControl, _steer_angle_imax, 1.00f),
+    AP_GROUPINFO("_PIVOT_IMAX", 14, AR_AttitudeControl, _pivot_imax, 1.00f),
 
-    // @Param: _STR_ANG_KP
+    // @Param: _PIVOT_KP
     // @DisplayName: Steering control angle IMAX value.
     // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
     // @Range: 0 1
     // @Increment: 0.00001
     // @User: Standard
-    AP_GROUPINFO("_STR_ANG_KP", 15, AR_AttitudeControl, _steer_angle_Kp, 0.00f),
+    AP_GROUPINFO("_PIVOT_KP", 15, AR_AttitudeControl, _pivot_kp, 0.00f),
 
-    // @Param: _STR_ANG_E
+    // @Param: _PIVOT_BIAS
     // @DisplayName: Final value of pivot.
     // @Description: Final value of pivot in degree.
     // @Range: 0 180
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("_STR_ANG_E", 16, AR_AttitudeControl, _steer_angle_end, 0),
-
-    // @Param: _ANG_I_R
-    // @DisplayName: Final value of pivot.
-    // @Description: Final value of pivot in degree.
-    // @Range: 0 180
-    // @Increment: 1
-    // @User: Standard
-    AP_GROUPINFO("_ANG_I_R", 17, AR_AttitudeControl, _angle_I_rate, 0),
-
-    // @Param: _ANG_FLAG
-    // @DisplayName: Steering control angle IMAX value.
-    // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
-    // @Range: 0 1
-    // @Increment: 0.00001
-    // @User: Standard
-    AP_GROUPINFO("_ANG_FLAG", 18, AR_AttitudeControl, _steer_angle_flag, 0),
-
-    // // @Param: _STR_ANG_I_Kend
-    // // @DisplayName: Steering control angle IMAX value.
-    // // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
-    // // @Range: 0 1
-    // // @Increment: 0.00001
-    // // @User: Standard
-    // AP_GROUPINFO("_ANG_DEADT", 20, AR_AttitudeControl, _steer_angle_deadTime, 100000.00f),
-
-    // // @Param: _STR_ANG_I_Kend
-    // // @DisplayName: Steering control angle IMAX value.
-    // // @Description: Steering control angle IMAX value. Is the maximum yaw_error value that "I" can saves.
-    // // @Range: 0 1
-    // // @Increment: 0.00001
-    // // @User: Standard
-    // AP_GROUPINFO("_ANG_DEG", 21, AR_AttitudeControl, _steer_angle_degree, 0.00f),
+    AP_GROUPINFO("_PIVOT_BIAS", 16, AR_AttitudeControl, _pivot_bias, 0),
 
     AP_GROUPEND};
 
@@ -518,32 +486,23 @@ float AR_AttitudeControl::get_turn_rate_from_heading(float heading_rad, float ra
     _steer_pivot_last_ms = now;
 
     // Calculate the desired turn rate (in degrees) from the angle error (also in degrees)
-    float Up = _steer_angle_end + _steer_angle_Kp * fabsf(yaw_error);
+    float Up = _pivot_bias + _pivot_kp * fabsf(yaw_error);
     if (yaw_error < 0)
     {
         Up = -Up;
     }
 
-    if (_steer_angle_flag > 0)
-    {
-        if (((fabsf(_ahrs.get_yaw_rate_earth()) * 180.0f) / M_PI) < _angle_I_rate)
-        {
-            _Ui += (_steer_angle_i * yaw_error) * dt;
-        }
-    }
-    else
-    {
-        _Ui += (_steer_angle_i * yaw_error) * dt;
-    }
+    // Integral component
+    _Ui += (_pivot_ki * yaw_error) * dt;
 
-    // steer_angle_imax needs to be a value between (-1, 1)
-    if (_Ui / 180.0f < -_steer_angle_imax)
+    // _pivot_imax needs to be a value between (-1, 1)
+    if (_Ui / 180.0f < -_pivot_imax)
     {
-        _Ui = -_steer_angle_imax * 180.0f;
+        _Ui = -_pivot_imax * 180.0f;
     }
-    else if (_Ui / 180.0f > _steer_angle_imax)
+    else if (_Ui / 180.0f > _pivot_imax)
     {
-        _Ui = _steer_angle_imax * 180.0f;
+        _Ui = _pivot_imax * 180.0f;
     }
 
     float U = (_Ui + Up) / 180.0f; // Control signal
