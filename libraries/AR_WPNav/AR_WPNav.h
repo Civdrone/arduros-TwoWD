@@ -88,7 +88,7 @@ public:
 
     // accessors for parameter values
     float get_default_speed() const { return _speed_max; }
-    float get_radius() const { return _radius; }
+    float get_radius() const { return _inner_radius; }
     float get_pivot_rate() const { return _pivot_rate; }
     bool get_pivot_flag() const { return _pivot_active; }
 
@@ -139,12 +139,12 @@ private:
     // parameters
     AP_Float _speed_max;    // target speed between waypoints in m/s
     AP_Float _speed_min;    // target speed minimum in m/s.  Vehicle will not slow below this speed for corners
-    AP_Float _radius;       // distance in meters from a waypoint when we consider the waypoint has been reached
+    AP_Float _inner_radius; // distance in meters from a waypoint when we consider the stop condition will start
     AP_Float _overshoot;    // maximum horizontal overshoot in meters
-    AP_Int16 _pivot_angle;  // angle error that leads to pivot turn
+    AP_Int16 _max_angle;    // angle error that leads to pivot turn
     AP_Int16 _pivot_rate;   // desired turn rate during pivot turns in deg/sec
     AP_Int16 _min_angle;    // angle error that stops pivot turn
-    AP_Float _inner_radius; // Vehicle will slow and pivot at this distance
+    AP_Float _outer_radius; // Vehicle will slow and pivot at this distance
     AP_Float _speed_slow;   // Vehicle will change the velocity at slow_radius distance from the point
 
     // references
