@@ -600,7 +600,7 @@ bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
     if (success) {
 
         auto &gps = AP::gps();
-        struct Location hp_position = gps.get_hp_position();
+        AP::ahrs()._hp_position = gps.get_hp_position();
 
         // now_position_time = AP_HAL::millis();
         // if(now_position_time - position_time >= position_interval)
@@ -612,8 +612,7 @@ bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
         // }
 
         tilt_correction(loc, _gps_antenna_height);
-        tilt_correction(hp_position, _gps_antenna_height);
-        AP::ahrs()._hp_position = hp_position;
+        // tilt_correction(hp_position, _gps_antenna_height);
 
         // if(now_position_time - position_time >= position_interval)
         // {
