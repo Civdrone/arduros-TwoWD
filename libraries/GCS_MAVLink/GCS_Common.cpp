@@ -4713,12 +4713,18 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
         gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lng,%d", (int)AP::ahrs()._hp_position.lng);
         gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lng_hp,%d", (int)AP::ahrs()._hp_position.lng_hp);
         gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "alt,%d", (int)AP::ahrs()._hp_position.alt);
+        gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "alt_hp,%d", (int)AP::ahrs()._hp_position.alt_hp);
+        gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "alt_elipsoid,%d", (int)AP::ahrs()._hp_position.alt_elipsoid);
+        gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "alt_elipsoid_hp,%d", (int)AP::ahrs()._hp_position.alt_elipsoid_hp);
 #else
         gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lat,%d", global_position_current_loc.lat);
         gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lat_hp,%d", global_position_current_loc.lat_hp);
         gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lng,%d", global_position_current_loc.lng);
         gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "lng_hp,%d", global_position_current_loc.lng_hp);
-        gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "alt,%d", global_position_current_loc.lng_hp);
+        gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "alt,%d", global_position_current_loc.alt);
+        gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "alt_hp,%d", global_position_current_loc.alt_hp);
+        gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "alt_elipsoid,%d", global_position_current_loc.alt_elipsoid);
+        gcs().send_text((MAV_SEVERITY)CURRENT_POSITION_MSG, "alt_elipsoid_hp,%d", global_position_current_loc.alt_elipsoid_hp);
 #endif
         return MAV_RESULT_ACCEPTED;
     }

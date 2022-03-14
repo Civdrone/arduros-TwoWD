@@ -18,11 +18,14 @@ public:
 
     // note that mission storage only stores 24 bits of altitude (~ +/- 83km)
     int32_t alt;
+    int32_t alt_elipsoid;
     int32_t lat;
     int32_t lng;
 
     int8_t lat_hp;
     int8_t lng_hp;
+    int8_t alt_hp;
+    int8_t alt_elipsoid_hp;
 
     /// enumeration of possible altitude types
     enum class AltFrame {
