@@ -27,6 +27,9 @@ public:
     int8_t alt_hp;
     int8_t alt_elipsoid_hp;
 
+    uint32_t horizontal_accuracy;
+    uint32_t vertical_accuracy;
+
     /// enumeration of possible altitude types
     enum class AltFrame {
         ABSOLUTE = 0,

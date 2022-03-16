@@ -1249,20 +1249,22 @@ AP_GPS_UBLOX::_parse_gps(void)
         _last_pos_time        = _buffer.hpposllh.itow;
         state.location.lng    = _buffer.hpposllh.longitude;
         state.location.lat    = _buffer.hpposllh.latitude;
-        state.location.alt    = _buffer.hpposllh.altitude_msl / 10;
+        state.location.alt    = _buffer.hpposllh.altitude_msl / 10; //cm
         state.location.lng_hp = _buffer.hpposllh.lonHp;
         state.location.lat_hp = _buffer.hpposllh.latHp;
 
         hp_position->lng    = _buffer.hpposllh.longitude;
         hp_position->lat    = _buffer.hpposllh.latitude;
-        hp_position->alt    = _buffer.hpposllh.altitude_msl;
-        hp_position->alt_elipsoid = _buffer.hpposllh.altitude_ellipsoid;
+        hp_position->alt    = _buffer.hpposllh.altitude_msl; //mm
+        hp_position->alt_elipsoid = _buffer.hpposllh.altitude_ellipsoid; //mm
         hp_position->lng_hp = _buffer.hpposllh.lonHp;
         hp_position->lat_hp = _buffer.hpposllh.latHp;
-        hp_position->alt_hp    = _buffer.hpposllh.hMSLHp;
-        hp_position->alt_elipsoid_hp = _buffer.hpposllh.heightHp;
+        hp_position->alt_hp    = _buffer.hpposllh.hMSLHp; //0.1 mm
+        hp_position->alt_elipsoid_hp = _buffer.hpposllh.heightHp; //0.1 mm
+        hp_position->horizontal_accuracy = _buffer.hpposllh.horizontal_accuracy; //0.1 mm
+        hp_position->vertical_accuracy = _buffer.hpposllh.vertical_accuracy; //0.1 mm
 
-        state.status          = next_fix;
+        state.status = next_fix;
         _new_position = true;
         state.horizontal_accuracy = _buffer.hpposllh.horizontal_accuracy*1.0e-3f;
         state.vertical_accuracy = _buffer.hpposllh.vertical_accuracy*1.0e-3f;
