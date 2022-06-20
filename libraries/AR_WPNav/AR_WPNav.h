@@ -140,6 +140,7 @@ private:
     AP_Float _speed_max;    // target speed between waypoints in m/s
     AP_Float _speed_min;    // target speed minimum in m/s.  Vehicle will not slow below this speed for corners
     AP_Float _inner_radius; // distance in meters from a waypoint when we consider the stop condition will start
+    AP_Float _correct_dist; // distance in meters for wp desired position correction in inner radius
     AP_Float _overshoot;    // maximum horizontal overshoot in meters
     AP_Int16 _max_angle;    // angle error that leads to pivot turn
     AP_Int16 _pivot_rate;   // desired turn rate during pivot turns in deg/sec
@@ -196,6 +197,7 @@ private:
     float _distance = 0;
     float _accel_bias = 0;
     bool _distance_flag = false;
+    bool _corrected_pos_set = false;
 
     // Stop condition variables
     AP_Float _gps_rate;

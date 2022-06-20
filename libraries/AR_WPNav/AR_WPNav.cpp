@@ -25,6 +25,7 @@ extern const AP_HAL::HAL &hal;
 #define AR_WPNAV_TIMEOUT_MS 100
 #define AR_WPNAV_SPEED_DEFAULT 0.8f
 #define AR_WPNAV_RADIUS_DEFAULT 0.07f
+#define AR_WPNAV_CORRECT_DIST_DEFAULT 0.5f
 #define AR_WPNAV_OVERSHOOT_DEFAULT 0.001f
 #define AR_WPNAV_PIVOT_ANGLE_DEFAULT 90
 #define AR_WPNAV_PIVOT_ANGLE_ACCURACY 10 // vehicle will pivot to within this many degrees of destination
@@ -50,6 +51,7 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @Increment: 0.1
     // @User: Standard
     AP_GROUPINFO("INNER_R", 2, AR_WPNav, _inner_radius, AR_WPNAV_RADIUS_DEFAULT),
+
 
     // @Param: OVERSHOOT
     // @DisplayName: Waypoint overshoot maximum
@@ -141,6 +143,15 @@ const AP_Param::GroupInfo AR_WPNav::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("DEBUG_MSG", 12, AR_WPNav, _debug_messages, 0),
 
+    // @Param: CORRECT_DIST
+    // @DisplayName: Distanse for corrected wp
+    // @Description: The distance in meters for wp desired position correction in inner radius.
+    // @Units: m
+    // @Range: 0 100
+    // @Increment: 0.1
+    // @User: Standard
+    AP_GROUPINFO("CORRECT_DIST", 13, AR_WPNav, _correct_dist, AR_WPNAV_CORRECT_DIST_DEFAULT),
+
     AP_GROUPEND};
 
 AR_WPNav::AR_WPNav(AR_AttitudeControl &atc, AP_Navigation &nav_controller) : _atc(atc),
@@ -230,9 +241,10 @@ void AR_WPNav::update(float dt)
         _pivot_active = true;
     }
 
-    if (near_wp)
+    if (_corrected_pos_set || near_wp)
     {
-
+        gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%s - %s,%s - %s","_corrected_pos_set", _corrected_pos_set ? "true" : "false", "near_wp", near_wp ? "true" : "false");
+        gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%d,%d,%s", static_cast<int>(_destination.lat), static_cast<int>(_destination.lng),"desired location");
         const float yaw_cd = _reversed ? wrap_360_cd(_oa_wp_bearing_cd + 18000) : _oa_wp_bearing_cd;
         const float yaw_error = fabsf(wrap_180_cd(yaw_cd - AP::ahrs().yaw_sensor)) * 0.01f;
 
@@ -249,8 +261,35 @@ void AR_WPNav::update(float dt)
             }
         }
 
+        if(!_corrected_pos_set)
+        {
+            Location corrected_loc;
+            if(AP::ahrs().get_position(corrected_loc))
+            {
+                 
+                corrected_loc.offset_bearing(_wp_bearing_cd, _correct_dist);
+                gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%d,%d,%s", static_cast<int>(_destination.lat), static_cast<int>(_destination.lng),"old desired location");
+                _destination = corrected_loc;
+                update_distance_and_bearing_to_destination();
+                gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%d,%d,%s", static_cast<int>(_destination.lat), static_cast<int>(_destination.lng),"new desired location");
+                _corrected_pos_set = true;
+            }
+            else
+            {
+                gcs().send_text(MAV_SEVERITY_INFO, "Can't read the current location");
+                // _distance_to_destination = 0.0f;
+                // _wp_bearing_cd = 0.0f;
+
+                // // update OA adjusted values
+                // _oa_distance_to_destination = 0.0f;
+                // _oa_wp_bearing_cd = 0.0f;
+                return;
+            }
+        }
+
         if (_dt_times > 0)
         {
+            gcs().send_text((MAV_SEVERITY)NAVIGATION_DATA, "%s - %d,%s - %d", "_dt_count", _dt_count,"_dt_times", _dt_times);
             if (_dt_count == _dt_times)
             {
                 this->stop_vehicle(dt);
@@ -659,6 +698,7 @@ void AR_WPNav::reset_memebers()
     _inner_radius_flag = false;
     _timer_flag = false;
     _distance_flag = false;
+    _corrected_pos_set = false;
     _desired_speed = _desired_speed_gcs;
     _dt_count = 1;
     _dt_times = 0;
